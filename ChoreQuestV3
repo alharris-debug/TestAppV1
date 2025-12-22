@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chore Quest - Earn Gems & Battle! ðŸ’Žâš“</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Cinzel:wght@600;700;900&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ocean-deep: #0a1f3d;
+            --ocean-mid: #1a3a5c;
+            --ocean-light: #2e5a7d;
+            --wave-foam: #4a7c9e;
+            --wood-dark: #3d2817;
+            --wood-mid: #6b4423;
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --blood-red: #8b1e1e;
+            --fire-orange: #ff6b35;
+            --legendary-purple: #9333ea;
+            --rare-blue: #3b82f6;
+            --common-gray: #6b7280;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .chore-view { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .pirate-view {
+            font-family: 'Crimson Pro', serif;
+            background: linear-gradient(180deg, var(--ocean-deep) 0%, var(--ocean-mid) 50%, var(--ocean-light) 100%);
+        }
+        .collection-view { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+        
+        .bounce { animation: bounce 0.5s ease; }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        
+        .float { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        
+        .shine { position: relative; overflow: hidden; }
+        .shine::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine { 0% { transform: translateX(-100%) translateY(-100%); } 100% { transform: translateX(100%) translateY(100%); } }
+
+        .legendary-glow { animation: legendary-glow 2s ease-in-out infinite; }
+        @keyframes legendary-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(147, 51, 234, 0.5), 0 0 40px rgba(147, 51, 234, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(147, 51, 234, 0.8), 0 0 60px rgba(147, 51, 234, 0.5); }
+        }
+
+        .rare-glow { animation: rare-glow 2s ease-in-out infinite; }
+        @keyframes rare-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4), 0 0 30px rgba(59, 130, 246, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 45px rgba(59, 130, 246, 0.4); }
+        }
+
+        .loot-card { perspective: 1000px; }
+        .loot-card-inner { transition: transform 0.8s; transform-style: preserve-3d; }
+        .loot-card.flipped .loot-card-inner { transform: rotateY(180deg); }
+        .loot-card-front, .loot-card-back { backface-visibility: hidden; position: absolute; width: 100%; height: 100%; }
+        .loot-card-back { transform: rotateY(180deg); }
+
+        .confetti-piece {
+            position: fixed;
+            width: 10px; height: 10px;
+            animation: confetti-fall 3s ease-out forwards;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        .screen-shake { animation: screen-shake 0.5s ease-in-out; }
+        @keyframes screen-shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        .ocean-waves { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+        .wave { position: absolute; width: 200%; height: 100px; background: linear-gradient(90deg, transparent, rgba(74, 124, 158, 0.1), transparent); animation: wave-drift 20s infinite linear; }
+        .wave:nth-child(1) { top: 20%; animation-duration: 15s; opacity: 0.3; }
+        .wave:nth-child(2) { top: 40%; animation-duration: 20s; animation-delay: -5s; opacity: 0.2; }
+        .wave:nth-child(3) { top: 60%; animation-duration: 25s; animation-delay: -10s; opacity: 0.15; }
+        @keyframes wave-drift { 0% { transform: translateX(-50%); } 100% { transform: translateX(0%); } }
+
+        .ship { position: relative; width: 100%; max-width: 400px; height: 280px; display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease; }
+        .ship.attacking { animation: ship-attack 0.6s ease; }
+        .ship.damaged { animation: ship-damage 0.5s ease; }
+        @keyframes ship-attack { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-15px) rotate(-3deg); } 60% { transform: translateX(15px) rotate(3deg); } }
+        @keyframes ship-damage { 0%, 100% { transform: translateX(0) rotate(0deg); } 25% { transform: translateX(-10px) rotate(-5deg); } 50% { transform: translateX(10px) rotate(5deg); } 75% { transform: translateX(-10px) rotate(-5deg); } }
+
+        .ship-visual { width: 100%; height: 100%; filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.8)); transition: all 0.5s ease; }
+        .player-ship .ship-visual { transform: scaleX(-1); }
+        .ship-visual.size-tiny { transform: scale(0.6); }
+        .ship-visual.size-small { transform: scale(0.7); }
+        .ship-visual.size-medium { transform: scale(0.9); }
+        .ship-visual.size-large { transform: scale(1.0); }
+        .ship-visual.size-huge { transform: scale(1.1); }
+        .ship-visual.size-massive { transform: scale(1.2); }
+        .ship-visual.size-legendary { transform: scale(1.3); animation: legendary-pulse 3s ease-in-out infinite; }
+        @keyframes legendary-pulse {
+            0%, 100% { filter: drop-shadow(0 8px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 40px rgba(212,175,55,0.4)); }
+            50% { filter: drop-shadow(0 8px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 60px rgba(212,175,55,0.6)); }
+        }
+        .player-ship .ship-visual.size-tiny { transform: scale(0.6) scaleX(-1); }
+        .player-ship .ship-visual.size-small { transform: scale(0.7) scaleX(-1); }
+        .player-ship .ship-visual.size-medium { transform: scale(0.9) scaleX(-1); }
+        .player-ship .ship-visual.size-large { transform: scale(1.0) scaleX(-1); }
+        .player-ship .ship-visual.size-huge { transform: scale(1.1) scaleX(-1); }
+        .player-ship .ship-visual.size-massive { transform: scale(1.2) scaleX(-1); }
+        .player-ship .ship-visual.size-legendary { transform: scale(1.3) scaleX(-1); }
+
+        .sail { animation: sail-wave 3s ease-in-out infinite; transform-origin: top; }
+        @keyframes sail-wave { 0%, 100% { transform: skewX(0deg); } 50% { transform: skewX(2deg); } }
+
+        .flag { animation: flag-flutter 2s ease-in-out infinite; transform-origin: left; }
+        @keyframes flag-flutter { 0%, 100% { transform: rotate(0deg) scaleX(1); } 25% { transform: rotate(-3deg) scaleX(0.95); } 75% { transform: rotate(3deg) scaleX(1.05); } }
+
+        .health-bar { width: 100%; height: 30px; background: rgba(0,0,0,0.5); border-radius: 15px; overflow: hidden; border: 2px solid var(--gold); position: relative; }
+        .health-fill { height: 100%; background: linear-gradient(90deg, var(--blood-red), #c92a2a, var(--blood-red)); transition: width 0.5s ease; position: relative; overflow: hidden; }
+        .health-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: health-shine 2s infinite; }
+        @keyframes health-shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .health-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-size: 1rem; }
+
+        .damage-number { position: fixed; font-family: 'Cinzel', serif; font-size: 3rem; font-weight: 900; color: var(--fire-orange); text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px var(--fire-orange); pointer-events: none; animation: damage-float 1s ease-out forwards; z-index: 100; }
+        @keyframes damage-float { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-80px) scale(1.3); } }
+
+        .combat-log { background: rgba(10, 31, 61, 0.6); border: 2px solid rgba(74, 124, 158, 0.5); border-radius: 15px; padding: 20px; margin: 20px 0; max-height: 200px; overflow-y: auto; backdrop-filter: blur(5px); }
+        .log-entry { padding: 8px 0; border-bottom: 1px solid rgba(74, 124, 158, 0.2); font-size: 1.1rem; animation: log-entry-appear 0.3s ease; }
+        .log-entry:last-child { border-bottom: none; }
+        @keyframes log-entry-appear { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .log-damage { color: var(--fire-orange); font-weight: 600; }
+        .log-heal { color: #51cf66; font-weight: 600; }
+        .combat-log::-webkit-scrollbar { width: 10px; }
+        .combat-log::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 5px; }
+        .combat-log::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 5px; }
+
+        .progress-bar-container { width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); transition: width 0.3s ease; }
+
+        .boss-entrance { animation: boss-entrance 1s ease-out; }
+        @keyframes boss-entrance { 0% { transform: scale(0) rotate(-180deg); opacity: 0; } 50% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        @keyframes pulse-glow { 0%, 100% { filter: drop-shadow(0 0 10px currentColor); } 50% { filter: drop-shadow(0 0 25px currentColor); } }
+
+        .streak-fire { animation: streak-fire 0.5s ease-in-out infinite alternate; }
+        @keyframes streak-fire { from { transform: scale(1) rotate(-5deg); } to { transform: scale(1.1) rotate(5deg); } }
+
+        .unlock-burst { animation: unlock-burst 0.6s ease-out forwards; }
+        @keyframes unlock-burst { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.3); } 100% { transform: scale(1); opacity: 1; } }
+
+        /* Sound toggle button */
+        .sound-toggle { position: fixed; top: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.5); border: 2px solid white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.5rem; transition: all 0.3s; }
+        .sound-toggle:hover { transform: scale(1.1); background: rgba(0,0,0,0.7); }
+        .sound-toggle.muted { opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script>
+    // ============ SOUND SYSTEM ============
+    // Procedural audio using Web Audio API - no external files needed!
+    
+    const SoundSystem = (() => {
+        let audioContext = null;
+        let masterGain = null;
+        let isUnlocked = false;
+        let isMuted = false;
+        
+        // Initialize audio context (must be called from user interaction)
+        const init = () => {
+            if (audioContext) return;
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioContext.createGain();
+            masterGain.gain.value = 0.5;
+            masterGain.connect(audioContext.destination);
+            isUnlocked = true;
+            
+            console.log('ðŸ”Š Sound system initialized!');
+        };
+        
+        // Unlock audio on mobile (call from first user interaction)
+        const unlock = () => {
+            if (isUnlocked) return;
+            init();
+            
+            // Play silent sound to unlock
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            gain.gain.value = 0;
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.1);
+        };
+        
+        const setMuted = (muted) => {
+            isMuted = muted;
+            if (masterGain) {
+                masterGain.gain.value = muted ? 0 : 0.5;
+            }
+        };
+        
+        const toggleMute = () => {
+            setMuted(!isMuted);
+            return isMuted;
+        };
+        
+        // Helper: Create oscillator with envelope
+        const playTone = (freq, duration, type = 'sine', volume = 0.3, attack = 0.01, decay = 0.1) => {
+            if (!audioContext || isMuted) return;
+            
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+            
+            gain.gain.setValueAtTime(0, audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(volume, audioContext.currentTime + attack);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(masterGain);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        };
+        
+        // Helper: Create noise burst
+        const playNoise = (duration, volume = 0.2, filterFreq = 1000) => {
+            if (!audioContext || isMuted) return;
+            
+            const bufferSize = audioContext.sampleRate * duration;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = filterFreq;
+            
+            const gain = audioContext.createGain();
+            gain.gain.setValueAtTime(volume, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+            
+            source.start();
+        };
+        
+        // ============ SOUND EFFECTS ============
+        
+        // UI Sounds
+        const buttonClick = () => {
+            if (!audioContext) return;
+            playTone(800 + Math.random() * 100, 0.1, 'sine', 0.15, 0.005, 0.05);
+        };
+        
+        const tabSwitch = () => {
+            if (!audioContext) return;
+            playTone(600, 0.08, 'sine', 0.1, 0.01, 0.03);
+            setTimeout(() => playTone(800, 0.08, 'sine', 0.1, 0.01, 0.03), 50);
+        };
+        
+        // Task/Chore Sounds
+        const taskComplete = () => {
+            if (!audioContext) return;
+            // Ascending triumphant sound - like collecting a gem!
+            const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+            notes.forEach((freq, i) => {
+                setTimeout(() => playTone(freq, 0.2, 'sine', 0.25, 0.01, 0.1), i * 80);
+            });
+        };
+        
+        const streakBonus = () => {
+            if (!audioContext) return;
+            // Exciting fanfare for streak!
+            playTone(440, 0.15, 'square', 0.15);
+            setTimeout(() => playTone(554, 0.15, 'square', 0.15), 100);
+            setTimeout(() => playTone(659, 0.15, 'square', 0.15), 200);
+            setTimeout(() => playTone(880, 0.3, 'square', 0.2), 300);
+        };
+        
+        // Battle Sounds
+        const cannonFire = () => {
+            if (!audioContext) return;
+            // Deep boom + noise for cannon
+            playTone(80, 0.4, 'sine', 0.5, 0.01, 0.2);
+            playTone(60, 0.5, 'sine', 0.4, 0.02, 0.3);
+            playNoise(0.3, 0.35, 800);
+            // Add slight variation
+            setTimeout(() => playTone(100 + Math.random() * 30, 0.2, 'triangle', 0.2), 50);
+        };
+        
+        const shipHit = () => {
+            if (!audioContext) return;
+            // Impact sound with crunch
+            playTone(150, 0.2, 'sawtooth', 0.3, 0.005, 0.1);
+            playNoise(0.15, 0.25, 600);
+            setTimeout(() => playTone(100, 0.15, 'sine', 0.2), 30);
+        };
+        
+        const shipRepair = () => {
+            if (!audioContext) return;
+            // Hammer/repair sounds - playful
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    playTone(400 + i * 50, 0.08, 'square', 0.15, 0.005, 0.03);
+                    playNoise(0.05, 0.1, 2000);
+                }, i * 100);
+            }
+            setTimeout(() => playTone(600, 0.15, 'sine', 0.2), 350);
+        };
+        
+        const enemyApproach = () => {
+            if (!audioContext) return;
+            // Ominous rising tone
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.5);
+            
+            gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.6);
+            
+            osc.connect(gain);
+            gain.connect(masterGain);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.6);
+        };
+        
+        // Victory/Defeat Sounds
+        const victory = () => {
+            if (!audioContext) return;
+            // Triumphant fanfare!
+            const fanfare = [
+                { freq: 523, time: 0 },     // C5
+                { freq: 659, time: 150 },   // E5
+                { freq: 784, time: 300 },   // G5
+                { freq: 1047, time: 450 },  // C6
+                { freq: 784, time: 600 },   // G5
+                { freq: 1047, time: 750 },  // C6
+            ];
+            
+            fanfare.forEach(note => {
+                setTimeout(() => playTone(note.freq, 0.25, 'square', 0.2, 0.01, 0.15), note.time);
+            });
+        };
+        
+        const defeat = () => {
+            if (!audioContext) return;
+            // Sad descending tones
+            const notes = [400, 350, 300, 200];
+            notes.forEach((freq, i) => {
+                setTimeout(() => playTone(freq, 0.3, 'sine', 0.2, 0.02, 0.2), i * 200);
+            });
+        };
+        
+        const levelUp = () => {
+            if (!audioContext) return;
+            // Magical ascending sweep
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    playTone(300 + i * 100, 0.15, 'sine', 0.15 + i * 0.02, 0.01, 0.1);
+                }, i * 50);
+            }
+        };
+        
+        // Loot Sounds
+        const lootRevealCommon = () => {
+            if (!audioContext) return;
+            playTone(440, 0.2, 'triangle', 0.2);
+            setTimeout(() => playTone(550, 0.15, 'triangle', 0.15), 100);
+        };
+        
+        const lootRevealRare = () => {
+            if (!audioContext) return;
+            // Magical sparkle
+            playTone(600, 0.15, 'sine', 0.2);
+            setTimeout(() => playTone(800, 0.15, 'sine', 0.2), 80);
+            setTimeout(() => playTone(1000, 0.2, 'sine', 0.25), 160);
+            setTimeout(() => playTone(1200, 0.25, 'sine', 0.2), 250);
+        };
+        
+        const lootRevealLegendary = () => {
+            if (!audioContext) return;
+            // Epic reveal with bass and sparkles!
+            playTone(100, 0.6, 'sine', 0.3);
+            playNoise(0.3, 0.2, 1500);
+            
+            // Ascending magical tones
+            const sparkle = [400, 600, 800, 1000, 1200, 1400];
+            sparkle.forEach((freq, i) => {
+                setTimeout(() => playTone(freq, 0.2, 'sine', 0.2), i * 60);
+            });
+            
+            // Final chord
+            setTimeout(() => {
+                playTone(523, 0.4, 'sine', 0.2);
+                playTone(659, 0.4, 'sine', 0.2);
+                playTone(784, 0.4, 'sine', 0.2);
+            }, 400);
+        };
+        
+        // Ship/Unlock Sounds
+        const shipUnlock = () => {
+            if (!audioContext) return;
+            // Triumphant horn-like sound
+            playTone(220, 0.4, 'sawtooth', 0.15);
+            playTone(277, 0.4, 'sawtooth', 0.15);
+            setTimeout(() => {
+                playTone(330, 0.5, 'sawtooth', 0.2);
+                playTone(440, 0.5, 'sawtooth', 0.2);
+            }, 300);
+        };
+        
+        const figureheadUnlock = () => {
+            if (!audioContext) return;
+            // Mystical reveal
+            playTone(200, 0.3, 'sine', 0.2);
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => playTone(400 + i * 200, 0.15, 'triangle', 0.15), 100 + i * 80);
+            }
+        };
+        
+        const purchase = () => {
+            if (!audioContext) return;
+            // Coin/gem purchase sound
+            playTone(1200, 0.1, 'sine', 0.2, 0.005, 0.05);
+            setTimeout(() => playTone(1500, 0.1, 'sine', 0.15, 0.005, 0.05), 60);
+        };
+        
+        // Boss Sounds
+        const bossAppear = () => {
+            if (!audioContext) return;
+            // Dramatic boss entrance
+            playTone(80, 0.8, 'sawtooth', 0.3);
+            playTone(100, 0.6, 'sine', 0.3);
+            playNoise(0.4, 0.2, 500);
+            
+            setTimeout(() => {
+                playTone(120, 0.3, 'sawtooth', 0.25);
+                playTone(60, 0.5, 'sine', 0.35);
+            }, 400);
+            
+            // Ominous pulse
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => playTone(80 + i * 10, 0.15, 'sine', 0.2), 600 + i * 150);
+            }
+        };
+        
+        const bossDefeated = () => {
+            if (!audioContext) return;
+            // Epic victory over boss!
+            playNoise(0.5, 0.3, 1000);
+            playTone(100, 0.6, 'sine', 0.3);
+            
+            const epicFanfare = [262, 330, 392, 523, 659, 784, 1047];
+            epicFanfare.forEach((freq, i) => {
+                setTimeout(() => playTone(freq, 0.25, 'square', 0.2), 200 + i * 100);
+            });
+        };
+        
+        return {
+            init,
+            unlock,
+            setMuted,
+            toggleMute,
+            isMuted: () => isMuted,
+            isReady: () => isUnlocked,
+            
+            // UI
+            buttonClick,
+            tabSwitch,
+            
+            // Tasks
+            taskComplete,
+            streakBonus,
+            
+            // Battle
+            cannonFire,
+            shipHit,
+            shipRepair,
+            enemyApproach,
+            
+            // Victory/Defeat
+            victory,
+            defeat,
+            levelUp,
+            
+            // Loot
+            lootRevealCommon,
+            lootRevealRare,
+            lootRevealLegendary,
+            
+            // Unlocks
+            shipUnlock,
+            figureheadUnlock,
+            purchase
+,
+            
+            // Boss
+            bossAppear,
+            bossDefeated
+        };
+    })();
+    
+    // Make available globally
+    window.SoundSystem = SoundSystem;
+    </script>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+        
+        // ============ GAME DATA ============
+        
+        const SHIP_PROGRESSION = [
+            { id: 'starter', name: "Rusty Raft", cost: 0, size: "tiny", emoji: "ðŸš£", description: "A humble beginning" },
+            { id: 'sloop', name: "Swift Sloop", cost: 50, size: "small", emoji: "â›µ", description: "Quick and nimble" },
+            { id: 'brigantine', name: "Battle Brigantine", cost: 150, size: "medium", emoji: "ðŸš¢", description: "Ready for action" },
+            { id: 'galleon', name: "War Galleon", cost: 400, size: "large", emoji: "âš“", description: "A force to reckon with" },
+            { id: 'frigate', name: "Doom Frigate", cost: 800, size: "huge", emoji: "ðŸ´â€â˜ ï¸", description: "Terror of the seas" },
+            { id: 'kraken', name: "Legendary Kraken", cost: 1500, size: "massive", emoji: "ðŸ¦‘", description: "Mythical destroyer" },
+            { id: 'destroyer', name: "Ultimate Destroyer", cost: 3000, size: "legendary", emoji: "ðŸ‘‘", description: "The pinnacle of power" }
+        ];
+
+        const LOOT_TABLES = {
+            hull: {
+                common: [
+                    { name: "Iron Nails", power: 5, emoji: "ðŸ”©" },
+                    { name: "Wooden Planks", power: 3, emoji: "ðŸªµ" },
+                    { name: "Tar Coating", power: 4, emoji: "ðŸ›¢ï¸" }
+                ],
+                rare: [
+                    { name: "Steel Plating", power: 15, emoji: "ðŸ›¡ï¸" },
+                    { name: "Reinforced Beams", power: 12, emoji: "âš™ï¸" },
+                    { name: "Copper Lining", power: 10, emoji: "ðŸ¥‰" }
+                ],
+                legendary: [
+                    { name: "Mythril Hull", power: 30, emoji: "ðŸ’Ž" },
+                    { name: "Dragon Scale Armor", power: 35, emoji: "ðŸ‰" },
+                    { name: "Enchanted Timber", power: 28, emoji: "âœ¨" }
+                ]
+            },
+            sails: {
+                common: [
+                    { name: "Canvas Scraps", power: 3, emoji: "ðŸ§µ" },
+                    { name: "Cotton Sails", power: 4, emoji: "ðŸ³ï¸" },
+                    { name: "Hemp Rigging", power: 5, emoji: "ðŸª¢" }
+                ],
+                rare: [
+                    { name: "Silk Sails", power: 10, emoji: "ðŸŽ€" },
+                    { name: "Spider Silk Weave", power: 12, emoji: "ðŸ•¸ï¸" },
+                    { name: "Storm Sails", power: 14, emoji: "â›ˆï¸" }
+                ],
+                legendary: [
+                    { name: "Wind Spirit Sails", power: 25, emoji: "ðŸŒ¬ï¸" },
+                    { name: "Phoenix Feather Sails", power: 30, emoji: "ðŸ”¥" },
+                    { name: "Void Sails", power: 28, emoji: "ðŸŒŒ" }
+                ]
+            },
+            cannons: {
+                common: [
+                    { name: "Gunpowder", power: 2, emoji: "ðŸ’¥" },
+                    { name: "Iron Cannonballs", power: 3, emoji: "âš«" },
+                    { name: "Basic Fuses", power: 4, emoji: "ðŸ§¨" }
+                ],
+                rare: [
+                    { name: "Explosive Rounds", power: 8, emoji: "ðŸ’£" },
+                    { name: "Chain Shot", power: 10, emoji: "â›“ï¸" },
+                    { name: "Grape Shot", power: 9, emoji: "ðŸ‡" }
+                ],
+                legendary: [
+                    { name: "Dragon Cannons", power: 20, emoji: "ðŸ²" },
+                    { name: "Thunder Barrels", power: 22, emoji: "âš¡" },
+                    { name: "Kraken Ink Bombs", power: 25, emoji: "ðŸ¦‘" }
+                ]
+            }
+        };
+
+        // Boss every 10 levels
+        const BOSS_BATTLES = {
+            10: {
+                name: "Ghost Captain Morgan",
+                healthMultiplier: 3,
+                emoji: "ðŸ‘»",
+                figurehead: { id: 'golden_mermaid', name: "Golden Mermaid", emoji: "ðŸ§œâ€â™€ï¸", description: "Lucky Treasure Finder" }
+            },
+            20: {
+                name: "The Kraken Mother",
+                healthMultiplier: 3.5,
+                emoji: "ðŸ¦‘",
+                figurehead: { id: 'dragon_skull', name: "Dragon Skull", emoji: "ðŸ‰", description: "Fear the Dragon" }
+            },
+            30: {
+                name: "Admiral Blackbeard's Ghost",
+                healthMultiplier: 4,
+                emoji: "ðŸ’€",
+                figurehead: { id: 'phoenix', name: "Phoenix Rising", emoji: "ðŸ”¥", description: "Never Surrender" }
+            },
+            40: {
+                name: "The Sea Serpent King",
+                healthMultiplier: 4.5,
+                emoji: "ðŸ",
+                figurehead: { id: 'serpent', name: "Serpent Crown", emoji: "ðŸ", description: "Ruler of the Deep" }
+            },
+            50: {
+                name: "The Dread Pizza",
+                healthMultiplier: 5,
+                emoji: "ðŸ•",
+                figurehead: { id: 'pizza', name: "Pizza Slice", emoji: "ðŸ•", description: "Deliciously Dangerous" }
+            }
+        };
+
+        const INITIAL_TASKS = [
+            { id: 1, name: 'Do the dishes', icon: 'ðŸ½ï¸', completed: false, points: 5 },
+            { id: 2, name: 'Clean your room', icon: 'ðŸ›ï¸', completed: false, points: 10 },
+            { id: 3, name: 'Take care of the cat', icon: 'ðŸ±', completed: false, points: 5 },
+            { id: 4, name: 'Practice music', icon: 'ðŸŽ¸', completed: false, points: 8 }
+        ];
+
+        const STORE_ITEMS = [
+            { id: 'cool', name: 'Cool Skin', type: 'skin', price: 15, emoji: 'ðŸ˜Ž' },
+            { id: 'happy', name: 'Happy Skin', type: 'skin', price: 15, emoji: 'ðŸ˜Š' },
+            { id: 'star', name: 'Star Skin', type: 'skin', price: 20, emoji: 'â­' },
+            { id: 'superhero', name: 'Superhero Outfit', type: 'outfit', price: 25, emoji: 'ðŸ¦¸' },
+            { id: 'wizard', name: 'Wizard Outfit', type: 'outfit', price: 25, emoji: 'ðŸ§™' },
+            { id: 'ninja', name: 'Ninja Outfit', type: 'outfit', price: 30, emoji: 'ðŸ¥·' },
+            { id: 'crown', name: 'Royal Crown', type: 'accessory', price: 20, emoji: 'ðŸ‘‘' },
+            { id: 'sunglasses', name: 'Cool Sunglasses', type: 'accessory', price: 15, emoji: 'ðŸ•¶ï¸' },
+            { id: 'hat', name: 'Party Hat', type: 'accessory', price: 12, emoji: 'ðŸŽ©' }
+        ];
+
+        // ============ UTILITY FUNCTIONS ============
+
+        const saveGame = (state) => {
+            try {
+                localStorage.setItem('chorequest_save_v3', JSON.stringify({
+                    ...state,
+                    savedAt: new Date().toISOString()
+                }));
+            } catch (e) {
+                console.error('Failed to save game:', e);
+            }
+        };
+
+        const loadGame = () => {
+            try {
+                const saved = localStorage.getItem('chorequest_save_v3');
+                return saved ? JSON.parse(saved) : null;
+            } catch (e) {
+                console.error('Failed to load game:', e);
+                return null;
+            }
+        };
+
+        const rollLoot = (level, battlesSinceRare) => {
+            const roll = Math.random();
+            let rarity;
+            
+            if (battlesSinceRare >= 10) {
+                rarity = roll < 0.3 ? 'legendary' : 'rare';
+            } else if (roll <= 0.05) {
+                rarity = 'legendary';
+            } else if (roll <= 0.30) {
+                rarity = 'rare';
+            } else {
+                rarity = 'common';
+            }
+
+            const types = ['hull', 'sails', 'cannons'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            const items = LOOT_TABLES[type][rarity];
+            const item = items[Math.floor(Math.random() * items.length)];
+
+            return { ...item, type, rarity };
+        };
+
+        const createConfetti = () => {
+            const colors = ['#ff6b35', '#f4d03f', '#9333ea', '#3b82f6', '#51cf66', '#ff69b4'];
+            const confettiPieces = [];
+            
+            for (let i = 0; i < 50; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = Math.random() * 0.5 + 's';
+                piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+                document.body.appendChild(piece);
+                confettiPieces.push(piece);
+            }
+
+            setTimeout(() => confettiPieces.forEach(p => p.remove()), 3500);
+        };
+
+        // Calculate which 10-level block a level belongs to
+        const getLevelBlock = (level) => Math.floor((level - 1) / 10);
+        const getBlockStart = (level) => getLevelBlock(level) * 10 + 1;
+
+        // ============ MAIN APP ============
+        
+        const ChoreQuestApp = () => {
+            const savedGame = loadGame();
+            
+            const [currentView, setCurrentView] = useState('tasks');
+            const [gems, setGems] = useState(savedGame?.gems || 25);
+            const [loot, setLoot] = useState(savedGame?.loot || 0);
+            const [tasks, setTasks] = useState(savedGame?.tasks || INITIAL_TASKS);
+            const [streak, setStreak] = useState(savedGame?.streak || 0);
+            const [lastPlayDate, setLastPlayDate] = useState(savedGame?.lastPlayDate || null);
+            const [soundEnabled, setSoundEnabled] = useState(savedGame?.soundEnabled !== false);
+            
+            const [avatar, setAvatar] = useState(savedGame?.avatar || {
+                skin: 'default', outfit: 'casual', accessory: 'none'
+            });
+            
+            const [inventory, setInventory] = useState(savedGame?.inventory || ['default', 'casual', 'none']);
+            const [celebration, setCelebration] = useState(false);
+            
+            const [currentShip, setCurrentShip] = useState(savedGame?.currentShip || 'starter');
+            const [ownedShips, setOwnedShips] = useState(savedGame?.ownedShips || ['starter']);
+            const [equipped, setEquipped] = useState(savedGame?.equipped || {
+                hull: null, sails: null, cannons: null, figurehead: null
+            });
+            const [lootInventory, setLootInventory] = useState(savedGame?.lootInventory || []);
+            const [figureheads, setFigureheads] = useState(savedGame?.figureheads || []);
+            const [battlesSinceRare, setBattlesSinceRare] = useState(savedGame?.battlesSinceRare || 0);
+            
+            const [gameState, setGameState] = useState({
+                level: savedGame?.gameState?.level || 1,
+                player: {
+                    maxHealth: 100, health: 100, cannons: 1, crew: 5,
+                    size: SHIP_PROGRESSION.find(s => s.id === (savedGame?.currentShip || 'starter'))?.size || 'tiny',
+                    damage: 15, repairAmount: 20
+                },
+                enemy: {
+                    maxHealth: 50, health: 50, cannons: 1, crew: 3,
+                    size: 'Small', damage: 10
+                },
+                inBattle: false, playerTurn: true, combatLog: [],
+                isBoss: false, bossData: null
+            });
+
+            const [showLootReveal, setShowLootReveal] = useState(false);
+            const [currentLoot, setCurrentLoot] = useState(null);
+            const [lootRevealed, setLootRevealed] = useState(false);
+            const [showVictory, setShowVictory] = useState(false);
+            const [showDefeat, setShowDefeat] = useState(false);
+            const [showBossIntro, setShowBossIntro] = useState(false);
+            const [showFigureheadUnlock, setShowFigureheadUnlock] = useState(false);
+            const [unlockedFigurehead, setUnlockedFigurehead] = useState(null);
+            const [showShipUnlock, setShowShipUnlock] = useState(false);
+            const [unlockedShip, setUnlockedShip] = useState(null);
+
+            const playerShipRef = useRef(null);
+            const enemyShipRef = useRef(null);
+
+            // Initialize sound on first interaction
+            useEffect(() => {
+                const handleFirstInteraction = () => {
+                    window.SoundSystem.unlock();
+                    if (!soundEnabled) {
+                        window.SoundSystem.setMuted(true);
+                    }
+                    document.removeEventListener('click', handleFirstInteraction);
+                    document.removeEventListener('touchstart', handleFirstInteraction);
+                };
+                
+                document.addEventListener('click', handleFirstInteraction);
+                document.addEventListener('touchstart', handleFirstInteraction);
+                
+                return () => {
+                    document.removeEventListener('click', handleFirstInteraction);
+                    document.removeEventListener('touchstart', handleFirstInteraction);
+                };
+            }, []);
+
+            const getTotalPower = useCallback(() => {
+                let power = 0;
+                if (equipped.hull) power += equipped.hull.power;
+                if (equipped.sails) power += equipped.sails.power;
+                if (equipped.cannons) power += equipped.cannons.power;
+                return power;
+            }, [equipped]);
+
+            // Save game whenever state changes
+            useEffect(() => {
+                saveGame({
+                    gems, loot, tasks, streak, lastPlayDate, avatar, inventory,
+                    currentShip, ownedShips, equipped, lootInventory, figureheads,
+                    battlesSinceRare, soundEnabled,
+                    gameState: { level: gameState.level }
+                });
+            }, [gems, loot, tasks, streak, avatar, inventory, currentShip, ownedShips, equipped, lootInventory, figureheads, battlesSinceRare, gameState.level, soundEnabled]);
+
+            // Daily reset
+            useEffect(() => {
+                const today = new Date().toDateString();
+                if (lastPlayDate && lastPlayDate !== today) {
+                    setTasks(tasks.map(task => ({ ...task, completed: false })));
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    if (lastPlayDate === yesterday.toDateString()) {
+                        setStreak(s => s + 1);
+                        window.SoundSystem.streakBonus();
+                    } else {
+                        setStreak(0);
+                    }
+                }
+                setLastPlayDate(today);
+            }, []);
+
+            // ============ SOUND TOGGLE ============
+            
+            const toggleSound = () => {
+                const newMuted = window.SoundSystem.toggleMute();
+                setSoundEnabled(!newMuted);
+                if (!newMuted) {
+                    window.SoundSystem.buttonClick();
+                }
+            };
+
+            // ============ TASK HANDLERS ============
+            
+            const toggleTask = (id) => {
+                const updatedTasks = tasks.map(task => {
+                    if (task.id === id && !task.completed) {
+                        const streakBonus = Math.floor(streak / 5);
+                        const totalPoints = task.points + streakBonus;
+                        setGems(g => g + totalPoints);
+                        setCelebration(true);
+                        window.SoundSystem.taskComplete();
+                        setTimeout(() => setCelebration(false), 500);
+                        return { ...task, completed: true };
+                    }
+                    return task;
+                });
+                setTasks(updatedTasks);
+            };
+
+            // ============ SHOP HANDLERS ============
+            
+            const buyItem = (item) => {
+                if (gems >= item.price && !inventory.includes(item.id)) {
+                    setGems(g => g - item.price);
+                    setInventory([...inventory, item.id]);
+                    window.SoundSystem.purchase();
+                    if (item.type === 'skin') setAvatar({ ...avatar, skin: item.id });
+                    if (item.type === 'outfit') setAvatar({ ...avatar, outfit: item.id });
+                    if (item.type === 'accessory') setAvatar({ ...avatar, accessory: item.id });
+                }
+            };
+
+            const equipItem = (itemId, type) => {
+                if (inventory.includes(itemId)) {
+                    setAvatar({ ...avatar, [type]: itemId });
+                    window.SoundSystem.buttonClick();
+                }
+            };
+
+            // ============ SHIP HANDLERS ============
+
+            const buyShip = (ship) => {
+                if (gems >= ship.cost && !ownedShips.includes(ship.id)) {
+                    setGems(g => g - ship.cost);
+                    setOwnedShips([...ownedShips, ship.id]);
+                    setCurrentShip(ship.id);
+                    setUnlockedShip(ship);
+                    setShowShipUnlock(true);
+                    window.SoundSystem.shipUnlock();
+                    createConfetti();
+                }
+            };
+
+            const selectShip = (shipId) => {
+                if (ownedShips.includes(shipId)) {
+                    setCurrentShip(shipId);
+                    window.SoundSystem.buttonClick();
+                }
+            };
+
+            const equipLoot = (lootItem) => {
+                setEquipped(prev => ({ ...prev, [lootItem.type]: lootItem }));
+                window.SoundSystem.buttonClick();
+            };
+
+            const equipFigurehead = (figurehead) => {
+                setEquipped(prev => ({ ...prev, figurehead: figurehead }));
+                window.SoundSystem.buttonClick();
+            };
+
+            // ============ BATTLE HANDLERS ============
+
+            const addLog = (message) => {
+                setGameState(prev => ({
+                    ...prev,
+                    combatLog: [message, ...prev.combatLog].slice(0, 10)
+                }));
+            };
+
+            const showDamageNumber = (target, damage) => {
+                const shipElement = target === 'player' ? playerShipRef.current : enemyShipRef.current;
+                if (!shipElement) return;
+
+                const damageNum = document.createElement('div');
+                damageNum.className = 'damage-number';
+                damageNum.textContent = `-${Math.floor(damage)}`;
+                
+                const rect = shipElement.getBoundingClientRect();
+                damageNum.style.left = `${rect.left + rect.width / 2 - 30}px`;
+                damageNum.style.top = `${rect.top + 50}px`;
+                
+                document.body.appendChild(damageNum);
+                
+                setTimeout(() => {
+                    if (document.body.contains(damageNum)) {
+                        document.body.removeChild(damageNum);
+                    }
+                }, 1000);
+            };
+
+            const startBattle = (overrideLevel = null) => {
+                const level = overrideLevel !== null ? overrideLevel : gameState.level;
+                const isBoss = level % 10 === 0 && BOSS_BATTLES[level];
+                const bossData = isBoss ? BOSS_BATTLES[level] : null;
+                
+                const currentShipData = SHIP_PROGRESSION.find(s => s.id === currentShip);
+                const shipIndex = SHIP_PROGRESSION.findIndex(s => s.id === currentShip);
+                
+                const baseDamage = 15 + (shipIndex * 5) + getTotalPower();
+                const baseHealth = 100 + (shipIndex * 25);
+                
+                const scaleFactor = 1 + (level * 0.3);
+                const bossMultiplier = isBoss ? bossData.healthMultiplier : 1;
+                
+                if (isBoss) {
+                    setShowBossIntro(true);
+                    window.SoundSystem.bossAppear();
+                    setTimeout(() => {
+                        setShowBossIntro(false);
+                        actuallyStartBattle();
+                    }, 2500);
+                } else {
+                    window.SoundSystem.enemyApproach();
+                    actuallyStartBattle();
+                }
+
+                function actuallyStartBattle() {
+                    setGameState(prev => ({
+                        ...prev,
+                        level: level,
+                        inBattle: true,
+                        playerTurn: true,
+                        isBoss,
+                        bossData,
+                        player: {
+                            maxHealth: baseHealth,
+                            health: baseHealth,
+                            cannons: 1 + shipIndex,
+                            crew: 5 + shipIndex * 2,
+                            size: currentShipData?.size || 'tiny',
+                            damage: baseDamage,
+                            repairAmount: 20 + shipIndex * 5
+                        },
+                        enemy: {
+                            maxHealth: Math.floor(50 * scaleFactor * bossMultiplier),
+                            health: Math.floor(50 * scaleFactor * bossMultiplier),
+                            cannons: Math.floor(1 + level / 3),
+                            crew: Math.floor(3 + level / 2),
+                            size: level > 8 ? 'Legendary' : level > 6 ? 'Massive' : level > 4 ? 'Large' : level > 2 ? 'Medium' : 'Small',
+                            damage: Math.floor(10 * scaleFactor * (isBoss ? 1.5 : 1))
+                        },
+                        combatLog: [isBoss ? `âš ï¸ BOSS BATTLE: ${bossData.name} approaches!` : 'âš“ Battle begins! Prepare for combat!']
+                    }));
+                }
+            };
+
+            const playerAttack = () => {
+                if (!gameState.inBattle || !gameState.playerTurn) return;
+                
+                setGameState(prev => ({ ...prev, playerTurn: false }));
+                window.SoundSystem.cannonFire();
+                
+                if (playerShipRef.current) {
+                    playerShipRef.current.classList.add('attacking');
+                    setTimeout(() => {
+                        if (playerShipRef.current) playerShipRef.current.classList.remove('attacking');
+                    }, 600);
+                }
+                
+                setTimeout(() => {
+                    const damage = gameState.player.damage + Math.random() * 10;
+                    showDamageNumber('enemy', damage);
+                    window.SoundSystem.shipHit();
+                    addLog(`âš”ï¸ You fire your cannons! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
+                    
+                    setGameState(prev => {
+                        const newHealth = prev.enemy.health - damage;
+                        
+                        if (newHealth <= 0) {
+                            setTimeout(() => handleVictory(), 500);
+                            return {
+                                ...prev,
+                                enemy: { ...prev.enemy, health: 0 },
+                                inBattle: false
+                            };
+                        }
+                        
+                        setTimeout(() => enemyAttack(), 1500);
+                        
+                        return {
+                            ...prev,
+                            enemy: { ...prev.enemy, health: newHealth }
+                        };
+                    });
+                }, 600);
+            };
+
+            const enemyAttack = () => {
+                window.SoundSystem.cannonFire();
+                
+                if (enemyShipRef.current) {
+                    enemyShipRef.current.classList.add('attacking');
+                    setTimeout(() => {
+                        if (enemyShipRef.current) enemyShipRef.current.classList.remove('attacking');
+                    }, 600);
+                }
+                
+                setTimeout(() => {
+                    const damage = gameState.enemy.damage + Math.random() * 5;
+                    showDamageNumber('player', damage);
+                    window.SoundSystem.shipHit();
+                    
+                    if (playerShipRef.current) {
+                        playerShipRef.current.classList.add('damaged');
+                        setTimeout(() => {
+                            if (playerShipRef.current) playerShipRef.current.classList.remove('damaged');
+                        }, 500);
+                    }
+                    
+                    addLog(`ðŸ’¥ Enemy fires back! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
+                    
+                    setGameState(prev => {
+                        const newHealth = prev.player.health - damage;
+                        
+                        if (newHealth <= 0) {
+                            setTimeout(() => {
+                                window.SoundSystem.defeat();
+                                setShowDefeat(true);
+                            }, 500);
+                            return {
+                                ...prev,
+                                player: { ...prev.player, health: 0 },
+                                inBattle: false
+                            };
+                        }
+                        
+                        return {
+                            ...prev,
+                            player: { ...prev.player, health: newHealth },
+                            playerTurn: true
+                        };
+                    });
+                }, 600);
+            };
+
+            const playerRepair = () => {
+                if (!gameState.inBattle || !gameState.playerTurn) return;
+                
+                setGameState(prev => ({ ...prev, playerTurn: false }));
+                window.SoundSystem.shipRepair();
+                
+                const healAmount = gameState.player.repairAmount;
+                
+                setGameState(prev => ({
+                    ...prev,
+                    player: {
+                        ...prev.player,
+                        health: Math.min(prev.player.health + healAmount, prev.player.maxHealth)
+                    }
+                }));
+                
+                addLog(`ðŸ”§ Your crew repairs! <span class="log-heal">+${healAmount} health</span>!`);
+                
+                setTimeout(() => enemyAttack(), 1000);
+            };
+
+            const handleVictory = () => {
+                const lootItem = rollLoot(gameState.level, battlesSinceRare);
+                setCurrentLoot(lootItem);
+                
+                if (lootItem.rarity === 'rare' || lootItem.rarity === 'legendary') {
+                    setBattlesSinceRare(0);
+                } else {
+                    setBattlesSinceRare(b => b + 1);
+                }
+                
+                setLootInventory(prev => [...prev, lootItem]);
+                
+                const currentEquipped = equipped[lootItem.type];
+                if (!currentEquipped || lootItem.power > currentEquipped.power) {
+                    setEquipped(prev => ({ ...prev, [lootItem.type]: lootItem }));
+                }
+                
+                if (gameState.isBoss && gameState.bossData) {
+                    const gemReward = gameState.level * 5 + 10;
+                    setGems(g => g + gemReward);
+                    setCurrentLoot(prev => ({ ...prev, gemReward, lootReward: 0 }));
+                    window.SoundSystem.bossDefeated();
+                    
+                    const figurehead = gameState.bossData.figurehead;
+                    if (!figureheads.find(f => f.id === figurehead.id)) {
+                        setFigureheads(prev => [...prev, figurehead]);
+                        setUnlockedFigurehead(figurehead);
+                        setTimeout(() => {
+                            setShowFigureheadUnlock(true);
+                            window.SoundSystem.figureheadUnlock();
+                            createConfetti();
+                        }, 2000);
+                    }
+                } else {
+                    const lootReward = gameState.level * 3 + 5;
+                    setLoot(l => l + lootReward);
+                    setCurrentLoot(prev => ({ ...prev, lootReward, gemReward: 0 }));
+                    window.SoundSystem.victory();
+                }
+                
+                setLootRevealed(false);
+                setShowLootReveal(true);
+                
+                setTimeout(() => {
+                    setLootRevealed(true);
+                    if (lootItem.rarity === 'legendary') {
+                        window.SoundSystem.lootRevealLegendary();
+                        document.body.classList.add('screen-shake');
+                        createConfetti();
+                        setTimeout(() => document.body.classList.remove('screen-shake'), 500);
+                    } else if (lootItem.rarity === 'rare') {
+                        window.SoundSystem.lootRevealRare();
+                    } else {
+                        window.SoundSystem.lootRevealCommon();
+                    }
+                }, 1000);
+            };
+
+            const closeLootReveal = () => {
+                setShowLootReveal(false);
+                setShowVictory(true);
+                window.SoundSystem.buttonClick();
+            };
+
+            const nextLevel = () => {
+                const newLevel = gameState.level + 1;
+                setShowVictory(false);
+                window.SoundSystem.levelUp();
+                startBattle(newLevel);
+            };
+
+            const restartBattle = () => {
+                setShowDefeat(false);
+                window.SoundSystem.buttonClick();
+                
+                // If boss fight lost, go back to start of the 10-level block
+                if (gameState.isBoss) {
+                    const blockStart = getBlockStart(gameState.level);
+                    setTimeout(() => startBattle(blockStart), 100);
+                } else {
+                    setTimeout(() => startBattle(gameState.level), 100);
+                }
+            };
+
+            const handleViewChange = (view) => {
+                setCurrentView(view);
+                window.SoundSystem.tabSwitch();
+            };
+
+            // ============ COMPONENTS ============
+            
+            const GemIcon = ({ size = "w-8 h-8" }) => (
+                <div className={`${size} relative inline-flex items-center justify-center`}>
+                    <span className="text-2xl">ðŸ’Ž</span>
+                </div>
+            );
+
+            const LootIcon = ({ size = "w-8 h-8" }) => (
+                <div className={`${size} relative inline-flex items-center justify-center`}>
+                    <span className="text-2xl">ðŸª™</span>
+                </div>
+            );
+            
+            const Avatar = () => {
+                const getSkinEmoji = () => {
+                    const skins = { default: 'ðŸ˜Š', cool: 'ðŸ˜Ž', happy: 'ðŸ˜„', star: 'â­' };
+                    return skins[avatar.skin] || 'ðŸ˜Š';
+                };
+                
+                const getOutfitColor = () => {
+                    const outfits = { casual: 'bg-blue-400', superhero: 'bg-red-500', wizard: 'bg-purple-600', ninja: 'bg-gray-800' };
+                    return outfits[avatar.outfit] || 'bg-blue-400';
+                };
+                
+                const getAccessoryEmoji = () => {
+                    const accessories = { none: '', crown: 'ðŸ‘‘', sunglasses: 'ðŸ•¶ï¸', hat: 'ðŸŽ©' };
+                    return accessories[avatar.accessory] || '';
+                };
+                
+                return (
+                    <div className="relative float">
+                        <div className={`w-32 h-40 ${getOutfitColor()} rounded-3xl shadow-lg relative`}>
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-6xl">{getSkinEmoji()}</div>
+                            {avatar.accessory !== 'none' && (
+                                <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 text-4xl">{getAccessoryEmoji()}</div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            const PirateShipSVG = ({ isPlayer, size }) => {
+                const sizeClass = `size-${size}`;
+                
+                return (
+                    <svg className={`ship-visual ${sizeClass}`} viewBox="0 0 300 250" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="150" cy="195" rx="80" ry="8" fill={isPlayer ? "rgba(74, 124, 158, 0.3)" : "rgba(139, 0, 0, 0.2)"}/>
+                        <path d="M50 180 L30 150 Q25 130 30 120 L40 90 L260 90 L270 120 Q275 130 270 150 L250 180 Z" fill="rgba(0,0,0,0.3)" transform="translate(3, 5)"/>
+                        <path d="M50 180 L30 150 Q25 130 30 120 L40 90 L260 90 L270 120 Q275 130 270 150 L250 180 Z" fill={isPlayer ? "#3d2817" : "#1a1a1a"} stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="3"/>
+                        <path d="M45 100 Q150 102 255 100" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" opacity="0.5" fill="none"/>
+                        <path d="M42 110 Q150 112 258 110" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" opacity="0.5" fill="none"/>
+                        <path d="M40 120 Q150 122 260 120" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" opacity="0.5" fill="none"/>
+                        <path d="M50 180 L35 155 Q32 140 35 130 L42 100 L80 100 L70 130 L60 160 Z" fill={isPlayer ? "#6b4423" : "#2d2d2d"} opacity="0.6"/>
+                        <rect x="40" y="85" width="220" height="12" fill={isPlayer ? "#6b4423" : "#2d2d2d"} stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="2" rx="2"/>
+                        <rect x="110" y="20" width="8" height="75" fill={isPlayer ? "#6b4423" : "#2d2d2d"} stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="2"/>
+                        <rect x="180" y="30" width="8" height="65" fill={isPlayer ? "#6b4423" : "#2d2d2d"} stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="2"/>
+                        <path className="sail" d="M120 35 L180 35 Q185 60 180 80 L120 80 Q115 60 120 35 Z" fill={isPlayer ? "#f5f5dc" : "#4a0000"} stroke={isPlayer ? "#8b7355" : "#2d0000"} strokeWidth="2"/>
+                        <path className="sail" d="M188 45 L230 45 Q233 60 230 75 L188 75 Q185 60 188 45 Z" fill={isPlayer ? "#f5f5dc" : "#4a0000"} stroke={isPlayer ? "#8b7355" : "#2d0000"} strokeWidth="2"/>
+                        <rect x="108" y="20" width="12" height="8" fill={isPlayer ? "#3d2817" : "#1a1a1a"} stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" rx="1"/>
+                        <g className="flag">
+                            <line x1="115" y1="20" x2="115" y2="5" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="2"/>
+                            <path d="M115 5 L140 8 Q138 12 140 16 L115 13 Z" fill={isPlayer ? "#1a1a1a" : "#8b0000"}/>
+                            <text x="120" y="14" fontSize="8" fill="#fff" fontWeight="bold">â˜ </text>
+                        </g>
+                        <line x1="45" y1="90" x2="255" y2="90" stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="3"/>
+                        <circle cx="200" cy="110" r="7" fill={isPlayer ? "#ffd700" : "#ff4500"} opacity="0.8" stroke={isPlayer ? "#8b7355" : "#8b0000"} strokeWidth="1.5"/>
+                        <circle cx="220" cy="115" r="6" fill={isPlayer ? "#ffd700" : "#ff4500"} opacity="0.8" stroke={isPlayer ? "#8b7355" : "#8b0000"} strokeWidth="1.5"/>
+                        <line x1="270" y1="120" x2="290" y2="110" stroke={isPlayer ? "#6b4423" : "#2d2d2d"} strokeWidth="5" strokeLinecap="round"/>
+                    </svg>
+                );
+            };
+            
+            const currentShipData = SHIP_PROGRESSION.find(s => s.id === currentShip);
+            const nextShip = SHIP_PROGRESSION.find(s => !ownedShips.includes(s.id));
+            const progressToNext = nextShip ? (gems / nextShip.cost) * 100 : 100;
+
+            return (
+                <div className={`min-h-screen p-4 ${currentView === 'pirate' ? 'pirate-view' : currentView === 'collection' ? 'collection-view' : 'chore-view'}`}>
+                    {/* Sound Toggle Button */}
+                    <button 
+                        onClick={toggleSound}
+                        className={`sound-toggle ${!soundEnabled ? 'muted' : ''}`}
+                        title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+                    >
+                        {soundEnabled ? 'ðŸ”Š' : 'ðŸ”‡'}
+                    </button>
+
+                    {currentView === 'pirate' && (
+                        <div className="ocean-waves">
+                            <div className="wave"></div>
+                            <div className="wave"></div>
+                            <div className="wave"></div>
+                        </div>
+                    )}
+                    
+                    <div className="max-w-6xl mx-auto relative z-10">
+                        {/* Header */}
+                        <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6">
+                            <div className="flex justify-between items-center flex-wrap gap-4">
+                                <h1 className="text-4xl font-bold text-purple-600">ðŸŒŸ Chore Quest</h1>
+                                <div className="flex items-center gap-4">
+                                    {streak > 0 && (
+                                        <div className="flex items-center gap-1 bg-orange-100 px-3 py-2 rounded-full">
+                                            <span className="text-2xl streak-fire">ðŸ”¥</span>
+                                            <span className="text-xl font-bold text-orange-600">{streak}</span>
+                                        </div>
+                                    )}
+                                    <div className={`flex items-center gap-2 bg-purple-100 px-4 py-2 rounded-full ${celebration ? 'bounce' : ''}`}>
+                                        <GemIcon size="w-8 h-8" />
+                                        <span className="text-2xl font-bold text-purple-700">{gems}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-yellow-100 px-4 py-2 rounded-full">
+                                        <LootIcon size="w-8 h-8" />
+                                        <span className="text-2xl font-bold text-yellow-700">{loot}</span>
+                                        <span className="text-xs text-yellow-600">loot</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Navigation */}
+                        <div className="flex gap-2 mb-6 overflow-x-auto">
+                            {['tasks', 'avatar', 'store', 'pirate', 'collection'].map(view => (
+                                <button
+                                    key={view}
+                                    onClick={() => handleViewChange(view)}
+                                    className={`flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-lg transition-all ${
+                                        currentView === view
+                                            ? 'bg-pink-500 text-white shadow-lg scale-105'
+                                            : 'bg-white text-gray-600 hover:bg-pink-100'
+                                    }`}
+                                >
+                                    {view === 'tasks' && 'ðŸ“'}
+                                    {view === 'avatar' && 'ðŸ‘¤'}
+                                    {view === 'store' && 'ðŸª'}
+                                    {view === 'pirate' && 'âš“'}
+                                    {view === 'collection' && 'ðŸŽ’'}
+                                    <span className="ml-1 capitalize">{view}</span>
+                                </button>
+                            ))}
+                        </div>
+                        
+                        {/* Tasks View */}
+                        {currentView === 'tasks' && (
+                            <div className="bg-white rounded-3xl shadow-2xl p-8">
+                                <h2 className="text-3xl font-bold text-purple-600 mb-6">Today's Chores</h2>
+                                <div className="space-y-4">
+                                    {tasks.map(task => (
+                                        <div
+                                            key={task.id}
+                                            onClick={() => !task.completed && toggleTask(task.id)}
+                                            className={`p-6 rounded-2xl cursor-pointer transition-all ${
+                                                task.completed
+                                                    ? 'bg-green-100 border-4 border-green-400'
+                                                    : 'bg-gradient-to-r from-purple-100 to-pink-100 border-4 border-purple-300 hover:scale-105 shine'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-5xl">{task.icon}</span>
+                                                    <div>
+                                                        <h3 className="text-2xl font-bold text-gray-800">{task.name}</h3>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <GemIcon size="w-6 h-6" />
+                                                            <span className="text-lg font-semibold text-purple-700">
+                                                                +{task.points}{streak > 0 && <span className="text-orange-500"> +{Math.floor(streak/5)} streak</span>}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center ${
+                                                    task.completed ? 'bg-green-500 border-green-600' : 'bg-white border-purple-300'
+                                                }`}>
+                                                    {task.completed && <span className="text-3xl text-white">âœ“</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                {tasks.every(task => task.completed) && (
+                                    <div className="mt-8 p-6 bg-gradient-to-r from-yellow-200 to-orange-200 rounded-2xl text-center">
+                                        <p className="text-3xl font-bold text-orange-700">ðŸŽ‰ All chores complete! Amazing work! ðŸŽ‰</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {/* Avatar View */}
+                        {currentView === 'avatar' && (
+                            <div className="bg-white rounded-3xl shadow-2xl p-8">
+                                <h2 className="text-3xl font-bold text-purple-600 mb-6">My Avatar</h2>
+                                <div className="flex flex-col items-center mb-8">
+                                    <Avatar />
+                                </div>
+                                
+                                <div className="space-y-6">
+                                    {['skin', 'outfit', 'accessory'].map(type => (
+                                        <div key={type}>
+                                            <h3 className="text-2xl font-bold text-gray-700 mb-3 capitalize">{type}s</h3>
+                                            <div className="grid grid-cols-4 gap-3">
+                                                {STORE_ITEMS.filter(item => item.type === type && inventory.includes(item.id)).map(item => (
+                                                    <button
+                                                        key={item.id}
+                                                        onClick={() => equipItem(item.id, type)}
+                                                        className={`p-4 rounded-xl text-4xl transition-all ${
+                                                            avatar[type] === item.id
+                                                                ? 'bg-purple-500 scale-110'
+                                                                : 'bg-purple-100 hover:bg-purple-200'
+                                                        }`}
+                                                    >
+                                                        {item.emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Store View */}
+                        {currentView === 'store' && (
+                            <div className="bg-white rounded-3xl shadow-2xl p-8">
+                                <h2 className="text-3xl font-bold text-purple-600 mb-6">ðŸ’Ž Gem Store</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {STORE_ITEMS.map(item => {
+                                        const owned = inventory.includes(item.id);
+                                        const canAfford = gems >= item.price;
+                                        
+                                        return (
+                                            <div
+                                                key={item.id}
+                                                className={`p-6 rounded-2xl border-4 transition-all ${
+                                                    owned ? 'bg-green-50 border-green-400'
+                                                    : canAfford ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 hover:scale-105 cursor-pointer'
+                                                    : 'bg-gray-100 border-gray-300 opacity-60'
+                                                }`}
+                                                onClick={() => !owned && canAfford && buyItem(item)}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-6xl">{item.emoji}</span>
+                                                        <div>
+                                                            <h3 className="text-xl font-bold text-gray-800">{item.name}</h3>
+                                                            <div className="flex items-center gap-2 mt-2">
+                                                                <GemIcon size="w-6 h-6" />
+                                                                <span className="text-lg font-semibold text-purple-700">{item.price}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {owned ? <span className="text-4xl">âœ“</span>
+                                                    : canAfford ? <button className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600">Buy</button>
+                                                    : <span className="text-2xl">ðŸ”’</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Collection View */}
+                        {currentView === 'collection' && (
+                            <div className="space-y-6">
+                                {/* Ships */}
+                                <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-3xl p-6 border-4 border-blue-500">
+                                    <h2 className="text-3xl font-bold text-white mb-6">ðŸš¢ Ships</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {SHIP_PROGRESSION.map(ship => {
+                                            const owned = ownedShips.includes(ship.id);
+                                            const isSelected = currentShip === ship.id;
+                                            const canAfford = gems >= ship.cost;
+                                            
+                                            return (
+                                                <div
+                                                    key={ship.id}
+                                                    onClick={() => owned ? selectShip(ship.id) : canAfford && buyShip(ship)}
+                                                    className={`p-4 rounded-xl text-center cursor-pointer transition-all ${
+                                                        isSelected ? 'bg-yellow-500 scale-105 ring-4 ring-yellow-300'
+                                                        : owned ? 'bg-blue-700 hover:bg-blue-600'
+                                                        : canAfford ? 'bg-gray-700 hover:bg-gray-600'
+                                                        : 'bg-gray-800 opacity-50'
+                                                    }`}
+                                                >
+                                                    <div className="text-4xl mb-2">{owned ? ship.emoji : 'â“'}</div>
+                                                    <div className="text-white font-bold text-sm">{ship.name}</div>
+                                                    {!owned && (
+                                                        <div className="flex items-center justify-center gap-1 mt-2">
+                                                            <span className="text-lg">ðŸ’Ž</span>
+                                                            <span className="text-yellow-300 font-bold">{ship.cost}</span>
+                                                        </div>
+                                                    )}
+                                                    {isSelected && <div className="text-xs mt-1 text-yellow-200">EQUIPPED</div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {nextShip && (
+                                        <div className="mt-4">
+                                            <div className="text-white text-sm mb-2">Progress to {nextShip.name}: {gems}/{nextShip.cost} ðŸ’Ž</div>
+                                            <div className="progress-bar-container">
+                                                <div className="progress-bar-fill" style={{width: `${Math.min(progressToNext, 100)}%`}}></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Figureheads */}
+                                <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-3xl p-6 border-4 border-purple-500">
+                                    <h2 className="text-3xl font-bold text-white mb-6">ðŸ† Figureheads (Boss Trophies)</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        {Object.values(BOSS_BATTLES).map(boss => {
+                                            const owned = figureheads.find(f => f.id === boss.figurehead.id);
+                                            const isEquipped = equipped.figurehead?.id === boss.figurehead.id;
+                                            
+                                            return (
+                                                <div
+                                                    key={boss.figurehead.id}
+                                                    onClick={() => owned && equipFigurehead(boss.figurehead)}
+                                                    className={`p-4 rounded-xl text-center transition-all ${
+                                                        isEquipped ? 'bg-yellow-500 scale-105 ring-4 ring-yellow-300 cursor-pointer'
+                                                        : owned ? 'bg-purple-700 hover:bg-purple-600 cursor-pointer'
+                                                        : 'bg-gray-800 opacity-50'
+                                                    }`}
+                                                >
+                                                    <div className="text-4xl mb-2">{owned ? boss.figurehead.emoji : 'â“'}</div>
+                                                    <div className="text-white font-bold text-xs">{owned ? boss.figurehead.name : '???'}</div>
+                                                    {isEquipped && <div className="text-xs mt-1 text-yellow-200">EQUIPPED</div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Equipment */}
+                                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 border-4 border-gray-600">
+                                    <h2 className="text-3xl font-bold text-white mb-4">âš”ï¸ Equipment</h2>
+                                    <div className="text-xl text-yellow-400 mb-4">Total Power: âš¡{getTotalPower()}</div>
+                                    
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                        {['hull', 'sails', 'cannons', 'figurehead'].map(slot => (
+                                            <div key={slot} className="bg-gray-700 rounded-xl p-4 text-center">
+                                                <div className="text-gray-400 text-sm capitalize mb-2">{slot}</div>
+                                                {equipped[slot] ? (
+                                                    <>
+                                                        <div className="text-3xl">{equipped[slot].emoji}</div>
+                                                        <div className="text-white text-sm font-bold">{equipped[slot].name}</div>
+                                                        {equipped[slot].power && (
+                                                            <div className="text-yellow-400 text-xs">+{equipped[slot].power} power</div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="text-gray-500 text-2xl">â€”</div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Loot Inventory */}
+                                    <h3 className="text-xl font-bold text-white mb-3">Loot Inventory</h3>
+                                    {lootInventory.length > 0 ? (
+                                        <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                                            {lootInventory.map((item, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => equipLoot(item)}
+                                                    className={`p-2 rounded-lg cursor-pointer transition-all hover:scale-110 ${
+                                                        item.rarity === 'legendary' ? 'bg-purple-600 legendary-glow'
+                                                        : item.rarity === 'rare' ? 'bg-blue-600 rare-glow'
+                                                        : 'bg-gray-600'
+                                                    }`}
+                                                    title={`${item.name} (+${item.power})`}
+                                                >
+                                                    <div className="text-2xl text-center">{item.emoji}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-gray-400 text-center py-4">Win battles to collect loot!</div>
+                                    )}
+
+                                    {loot >= 50 && (
+                                        <div className="mt-4 p-4 bg-yellow-600 rounded-xl text-center">
+                                            <span className="text-white font-bold">ðŸ”§ Ship Upgrades Coming Soon! ({loot} loot saved)</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Pirate Battle View */}
+                        {currentView === 'pirate' && (
+                            <div>
+                                <h1 style={{fontFamily: 'Cinzel'}} className="text-5xl font-bold text-center mb-4 text-yellow-400">
+                                    âš“ PIRATE BATTLE âš“
+                                </h1>
+                                <div className="text-center text-xl mb-6 text-blue-200">
+                                    Level {gameState.level}
+                                    {gameState.level % 10 === 0 && BOSS_BATTLES[gameState.level] && (
+                                        <span className="ml-2 text-red-400">ðŸ”¥ BOSS LEVEL!</span>
+                                    )}
+                                </div>
+
+                                {!gameState.inBattle ? (
+                                    <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-12 text-center">
+                                        <div className="text-6xl mb-4">{currentShipData?.emoji || 'ðŸš£'}</div>
+                                        <div className="text-2xl text-white mb-4">{currentShipData?.name || 'Rusty Raft'}</div>
+                                        <div className="text-yellow-400 mb-6">âš¡ Power: {getTotalPower()}</div>
+                                        <button
+                                            onClick={() => startBattle()}
+                                            style={{fontFamily: 'Cinzel'}}
+                                            className="px-12 py-6 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-2xl font-bold text-3xl hover:scale-105 transition-transform shadow-2xl"
+                                        >
+                                            ðŸ´â€â˜ ï¸ START BATTLE ðŸ´â€â˜ ï¸
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Battle Arena */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                            {/* Player Ship */}
+                                            <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-6 border-4 border-blue-500 shadow-2xl">
+                                                <h3 style={{fontFamily: 'Cinzel'}} className="text-2xl font-bold text-yellow-400 text-center mb-4">
+                                                    {currentShipData?.name || 'Your Ship'}
+                                                </h3>
+                                                <div ref={playerShipRef} className="ship player-ship flex justify-center mb-4">
+                                                    <PirateShipSVG isPlayer={true} size={gameState.player.size} />
+                                                </div>
+                                                <div className="space-y-2 text-white">
+                                                    <div className="flex justify-between"><span>âš”ï¸ Cannons:</span><span className="font-bold text-yellow-400">{gameState.player.cannons}</span></div>
+                                                    <div className="flex justify-between"><span>ðŸ‘¥ Crew:</span><span className="font-bold text-yellow-400">{gameState.player.crew}</span></div>
+                                                    <div className="health-bar mt-4">
+                                                        <div className="health-fill" style={{width: `${(gameState.player.health / gameState.player.maxHealth) * 100}%`}}></div>
+                                                        <div className="health-text">{Math.floor(gameState.player.health)} / {gameState.player.maxHealth}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Enemy Ship */}
+                                            <div className={`bg-opacity-40 ${gameState.isBoss ? 'bg-purple-900 border-purple-500' : 'bg-red-900 border-red-500'} backdrop-blur rounded-3xl p-6 border-4 shadow-2xl`}>
+                                                <h3 style={{fontFamily: 'Cinzel'}} className="text-2xl font-bold text-yellow-400 text-center mb-4">
+                                                    {gameState.isBoss && gameState.bossData ? (
+                                                        <span className="flex items-center justify-center gap-2">
+                                                            <span className="text-3xl">{gameState.bossData.emoji}</span>
+                                                            {gameState.bossData.name}
+                                                        </span>
+                                                    ) : (
+                                                        `Level ${gameState.level} Enemy`
+                                                    )}
+                                                </h3>
+                                                <div ref={enemyShipRef} className="ship enemy-ship flex justify-center mb-4">
+                                                    <PirateShipSVG isPlayer={false} size={gameState.enemy.size} />
+                                                </div>
+                                                <div className="space-y-2 text-white">
+                                                    <div className="flex justify-between"><span>âš”ï¸ Cannons:</span><span className="font-bold text-yellow-400">{gameState.enemy.cannons}</span></div>
+                                                    <div className="flex justify-between"><span>ðŸ‘¥ Crew:</span><span className="font-bold text-yellow-400">{gameState.enemy.crew}</span></div>
+                                                    <div className="health-bar mt-4">
+                                                        <div className="health-fill" style={{width: `${(gameState.enemy.health / gameState.enemy.maxHealth) * 100}%`}}></div>
+                                                        <div className="health-text">{Math.floor(gameState.enemy.health)} / {Math.floor(gameState.enemy.maxHealth)}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Combat Actions */}
+                                        <div className="flex gap-4 justify-center mb-6 flex-wrap">
+                                            <button
+                                                onClick={playerAttack}
+                                                disabled={!gameState.playerTurn}
+                                                style={{fontFamily: 'Cinzel'}}
+                                                className="px-8 py-4 bg-gradient-to-r from-red-700 to-orange-600 text-white rounded-xl font-bold text-xl hover:from-red-600 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl border-2 border-yellow-500"
+                                            >
+                                                ðŸ’£ FIRE!
+                                            </button>
+                                            <button
+                                                onClick={playerRepair}
+                                                disabled={!gameState.playerTurn}
+                                                style={{fontFamily: 'Cinzel'}}
+                                                className="px-8 py-4 bg-gradient-to-r from-green-700 to-emerald-600 text-white rounded-xl font-bold text-xl hover:from-green-600 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl border-2 border-yellow-500"
+                                            >
+                                                ðŸ”§ REPAIR
+                                            </button>
+                                        </div>
+
+                                        {/* Combat Log */}
+                                        <div className="combat-log text-white">
+                                            {gameState.combatLog.map((log, idx) => (
+                                                <div key={idx} className="log-entry" dangerouslySetInnerHTML={{__html: log}}></div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Loot Reveal Modal */}
+                    {showLootReveal && currentLoot && (
+                        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                            <div className="text-center">
+                                <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-8">LOOT DROP!</h2>
+                                
+                                <div className={`loot-card w-64 h-80 mx-auto mb-8 ${lootRevealed ? 'flipped' : ''}`}>
+                                    <div className="loot-card-inner relative w-full h-full">
+                                        <div className="loot-card-front bg-gradient-to-br from-gray-700 to-gray-900 rounded-2xl flex items-center justify-center border-4 border-yellow-500">
+                                            <span className="text-8xl">â“</span>
+                                        </div>
+                                        <div className={`loot-card-back rounded-2xl flex flex-col items-center justify-center p-6 border-4 ${
+                                            currentLoot.rarity === 'legendary' ? 'bg-gradient-to-br from-purple-600 to-purple-900 border-purple-400 legendary-glow'
+                                            : currentLoot.rarity === 'rare' ? 'bg-gradient-to-br from-blue-600 to-blue-900 border-blue-400 rare-glow'
+                                            : 'bg-gradient-to-br from-gray-600 to-gray-800 border-gray-400'
+                                        }`}>
+                                            <span className="text-6xl mb-4">{currentLoot.emoji}</span>
+                                            <span className={`text-sm font-bold uppercase mb-2 ${
+                                                currentLoot.rarity === 'legendary' ? 'text-purple-300'
+                                                : currentLoot.rarity === 'rare' ? 'text-blue-300'
+                                                : 'text-gray-300'
+                                            }`}>{currentLoot.rarity}</span>
+                                            <span className="text-xl font-bold text-white mb-2">{currentLoot.name}</span>
+                                            <span className="text-yellow-400 font-bold">+{currentLoot.power} Power</span>
+                                            <span className="text-gray-300 text-sm mt-2 capitalize">{currentLoot.type}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {lootRevealed && (
+                                    <div className="space-y-4">
+                                        {currentLoot.gemReward > 0 && (
+                                            <div className="text-2xl text-purple-300">+{currentLoot.gemReward} ðŸ’Ž Gems!</div>
+                                        )}
+                                        {currentLoot.lootReward > 0 && (
+                                            <div className="text-2xl text-yellow-300">+{currentLoot.lootReward} ðŸª™ Loot!</div>
+                                        )}
+                                        <button
+                                            onClick={closeLootReveal}
+                                            style={{fontFamily: 'Cinzel'}}
+                                            className="mt-4 px-8 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl font-bold text-xl hover:scale-105 transition-transform"
+                                        >
+                                            CONTINUE
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Victory Modal */}
+                    {showVictory && (
+                        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                            <div className="bg-gradient-to-br from-yellow-600 to-orange-600 rounded-3xl p-12 text-center max-w-lg border-8 border-yellow-400 shadow-2xl">
+                                <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
+                                    ðŸ† VICTORY! ðŸ†
+                                </h2>
+                                <p className="text-2xl text-white mb-8">Level {gameState.level} Complete!</p>
+                                <button
+                                    onClick={nextLevel}
+                                    style={{fontFamily: 'Cinzel'}}
+                                    className="px-12 py-4 bg-white text-orange-600 rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
+                                >
+                                    NEXT LEVEL âš“
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Defeat Modal */}
+                    {showDefeat && (
+                        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                            <div className="bg-gradient-to-br from-red-900 to-black rounded-3xl p-12 text-center max-w-lg border-8 border-red-700 shadow-2xl">
+                                <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-red-500 mb-4">
+                                    ðŸ’€ DEFEATED ðŸ’€
+                                </h2>
+                                {gameState.isBoss ? (
+                                    <>
+                                        <p className="text-xl text-white mb-4">The boss was too strong!</p>
+                                        <p className="text-lg text-gray-300 mb-8">
+                                            Back to Level {getBlockStart(gameState.level)} to train.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p className="text-xl text-gray-300 mb-8">Your ship has been sunk!</p>
+                                )}
+                                <button
+                                    onClick={restartBattle}
+                                    style={{fontFamily: 'Cinzel'}}
+                                    className="px-12 py-4 bg-red-600 text-white rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
+                                >
+                                    {gameState.isBoss ? 'BACK TO TRAINING âš“' : 'TRY AGAIN âš“'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Boss Intro */}
+                    {showBossIntro && gameState.bossData && (
+                        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+                            <div className="text-center boss-entrance">
+                                <div className="text-9xl mb-8 pulse-glow" style={{color: '#ff4444'}}>{gameState.bossData.emoji}</div>
+                                <h2 style={{fontFamily: 'Cinzel'}} className="text-5xl font-bold text-red-500 mb-4">
+                                    âš ï¸ BOSS BATTLE âš ï¸
+                                </h2>
+                                <p className="text-3xl text-white">{gameState.bossData.name}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Figurehead Unlock */}
+                    {showFigureheadUnlock && unlockedFigurehead && (
+                        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+                            <div className="bg-gradient-to-br from-purple-800 to-pink-900 rounded-3xl p-12 text-center max-w-lg border-8 border-purple-400 shadow-2xl unlock-burst">
+                                <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
+                                    ðŸ† FIGUREHEAD UNLOCKED! ðŸ†
+                                </h2>
+                                <div className="text-8xl mb-4">{unlockedFigurehead.emoji}</div>
+                                <p className="text-2xl text-purple-200 font-bold mb-2">{unlockedFigurehead.name}</p>
+                                <p className="text-lg text-gray-300 mb-8">{unlockedFigurehead.description}</p>
+                                <button
+                                    onClick={() => setShowFigureheadUnlock(false)}
+                                    className="px-8 py-3 bg-purple-500 text-white rounded-xl font-bold text-xl hover:bg-purple-400"
+                                >
+                                    AWESOME!
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Ship Unlock */}
+                    {showShipUnlock && unlockedShip && (
+                        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+                            <div className="bg-gradient-to-br from-blue-800 to-cyan-900 rounded-3xl p-12 text-center max-w-lg border-8 border-blue-400 shadow-2xl unlock-burst">
+                                <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
+                                    ðŸš¢ NEW SHIP! ðŸš¢
+                                </h2>
+                                <div className="text-8xl mb-4">{unlockedShip.emoji}</div>
+                                <p className="text-2xl text-blue-200 font-bold mb-2">{unlockedShip.name}</p>
+                                <p className="text-lg text-gray-300 mb-8">{unlockedShip.description}</p>
+                                <button
+                                    onClick={() => setShowShipUnlock(false)}
+                                    className="px-8 py-3 bg-blue-500 text-white rounded-xl font-bold text-xl hover:bg-blue-400"
+                                >
+                                    SET SAIL!
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        ReactDOM.render(<ChoreQuestApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
