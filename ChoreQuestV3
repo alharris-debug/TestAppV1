@@ -173,6 +173,192 @@
         .sound-toggle { position: fixed; top: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.5); border: 2px solid white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.5rem; transition: all 0.3s; }
         .sound-toggle:hover { transform: scale(1.1); background: rgba(0,0,0,0.7); }
         .sound-toggle.muted { opacity: 0.5; }
+
+        /* Real-time Battle Styles */
+        .battle-action-btn {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 30px;
+            border: none;
+            border-radius: 15px;
+            font-weight: 700;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 100px;
+        }
+
+        .battle-action-btn.fire {
+            flex: 2;
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            color: white;
+            border: 3px solid #f39c12;
+        }
+
+        .battle-action-btn.repair {
+            flex: 1;
+            background: linear-gradient(135deg, #2980b9, #3498db);
+            color: white;
+            border: 3px solid #5dade2;
+        }
+
+        .battle-action-btn:disabled {
+            opacity: 0.6;
+            filter: grayscale(50%);
+            cursor: not-allowed;
+        }
+
+        .battle-action-btn:not(:disabled):active {
+            transform: scale(0.95);
+        }
+
+        .battle-action-btn.ready {
+            animation: btn-ready-pulse 1s infinite;
+        }
+
+        @keyframes btn-ready-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 208, 63, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(244, 208, 63, 0); }
+        }
+
+        .cooldown-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.6);
+            transition: height 0.1s linear;
+        }
+
+        .btn-label {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cooldown-text {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Cooldown Indicators */
+        .cooldown-indicators {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #8899a6;
+            margin: 10px 0;
+        }
+
+        .cooldown-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cooldown-indicator .bar {
+            width: 50px;
+            height: 8px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .cooldown-indicator .bar-fill {
+            height: 100%;
+            background: var(--fire-orange);
+            transition: width 0.1s linear;
+        }
+
+        .cooldown-indicator.repair .bar-fill {
+            background: #3498db;
+        }
+
+        /* Auto Battle Toggle */
+        .auto-battle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+        }
+
+        .auto-battle-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .auto-battle-toggle:hover {
+            background: rgba(0,0,0,0.5);
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 13px;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #27ae60;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(24px);
+        }
+
+        /* Enemy Action Indicator */
+        .enemy-action-bar {
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-top: 10px;
+        }
+
+        .enemy-action-label {
+            font-size: 0.9rem;
+            color: #ff6b6b;
+            margin-bottom: 5px;
+        }
+
+        .enemy-cooldown-bar {
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .enemy-cooldown-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            transition: width 0.1s linear;
+        }
     </style>
 </head>
 <body>
@@ -769,11 +955,19 @@
                 },
                 enemy: {
                     maxHealth: 50, health: 50, cannons: 1, crew: 3,
-                    size: 'Small', damage: 10
+                    size: 'Small', damage: 10, fireCooldown: 3.5, repairThreshold: 0.4
                 },
-                inBattle: false, playerTurn: true, combatLog: [],
-                isBoss: false, bossData: null
+                inBattle: false, combatLog: [],
+                isBoss: false, bossData: null,
+                // Real-time battle cooldowns
+                playerCooldown: 0,
+                enemyCooldown: 0,
+                baseCooldown: 3.0
             });
+
+            const [autoBattle, setAutoBattle] = useState(savedGame?.autoBattle || false);
+            const lastTimeRef = useRef(0);
+            const gameLoopRef = useRef(null);
 
             const [showLootReveal, setShowLootReveal] = useState(false);
             const [currentLoot, setCurrentLoot] = useState(null);
@@ -822,10 +1016,10 @@
                 saveGame({
                     gems, loot, tasks, streak, lastPlayDate, avatar, inventory,
                     currentShip, ownedShips, equipped, lootInventory, figureheads,
-                    battlesSinceRare, soundEnabled,
+                    battlesSinceRare, soundEnabled, autoBattle,
                     gameState: { level: gameState.level }
                 });
-            }, [gems, loot, tasks, streak, avatar, inventory, currentShip, ownedShips, equipped, lootInventory, figureheads, battlesSinceRare, gameState.level, soundEnabled]);
+            }, [gems, loot, tasks, streak, avatar, inventory, currentShip, ownedShips, equipped, lootInventory, figureheads, battlesSinceRare, gameState.level, soundEnabled, autoBattle]);
 
             // Daily reset
             useEffect(() => {
@@ -845,7 +1039,7 @@
             }, []);
 
             // ============ SOUND TOGGLE ============
-            
+
             const toggleSound = () => {
                 const newMuted = window.SoundSystem.toggleMute();
                 setSoundEnabled(!newMuted);
@@ -853,6 +1047,123 @@
                     window.SoundSystem.buttonClick();
                 }
             };
+
+            // ============ REAL-TIME BATTLE HELPERS ============
+
+            const getPlayerCooldown = useCallback(() => {
+                const shipIndex = SHIP_PROGRESSION.findIndex(s => s.id === currentShip);
+                const crewBonus = shipIndex * 5; // 5% reduction per ship tier
+                const reduction = crewBonus / 100;
+                return Math.max(gameState.baseCooldown * (1 - reduction), 0.8);
+            }, [currentShip, gameState.baseCooldown]);
+
+            // ============ REAL-TIME GAME LOOP ============
+
+            useEffect(() => {
+                if (!gameState.inBattle) {
+                    lastTimeRef.current = 0;
+                    return;
+                }
+
+                const runGameLoop = (currentTime) => {
+                    if (!lastTimeRef.current) lastTimeRef.current = currentTime;
+                    const delta = (currentTime - lastTimeRef.current) / 1000;
+                    lastTimeRef.current = currentTime;
+
+                    setGameState(prev => {
+                        if (!prev.inBattle) return prev;
+
+                        let newPlayerCooldown = Math.max(0, prev.playerCooldown - delta);
+                        let newEnemyCooldown = Math.max(0, prev.enemyCooldown - delta);
+                        let newPlayerHealth = prev.player.health;
+                        let newEnemyHealth = prev.enemy.health;
+                        let newCombatLog = [...prev.combatLog];
+
+                        // Enemy AI action when cooldown is ready
+                        if (newEnemyCooldown <= 0 && prev.enemy.health > 0 && prev.player.health > 0) {
+                            const healthPct = prev.enemy.health / prev.enemy.maxHealth;
+
+                            if (healthPct < prev.enemy.repairThreshold && prev.enemy.health < prev.enemy.maxHealth) {
+                                // Enemy repairs
+                                const healAmount = Math.min(10 + Math.floor(prev.level / 2) * 5, prev.enemy.maxHealth - prev.enemy.health);
+                                newEnemyHealth = prev.enemy.health + healAmount;
+                                newCombatLog = [`ðŸ"§ Enemy repairs! <span class="log-heal">+${healAmount}</span> HP!`, ...newCombatLog].slice(0, 10);
+                                window.SoundSystem.shipRepair();
+                            } else {
+                                // Enemy attacks
+                                const damage = prev.enemy.damage + Math.random() * 3;
+                                newPlayerHealth = Math.max(0, prev.player.health - damage);
+                                newCombatLog = [`ðŸ'¥ Enemy fires! <span class="log-damage">-${Math.floor(damage)}</span> damage!`, ...newCombatLog].slice(0, 10);
+                                window.SoundSystem.cannonFire();
+                                setTimeout(() => window.SoundSystem.shipHit(), 200);
+
+                                // Animate player damage
+                                if (playerShipRef.current) {
+                                    playerShipRef.current.classList.add('damaged');
+                                    setTimeout(() => {
+                                        if (playerShipRef.current) playerShipRef.current.classList.remove('damaged');
+                                    }, 300);
+                                }
+                                showDamageNumber('player', damage);
+                            }
+                            newEnemyCooldown = prev.enemy.fireCooldown;
+                        }
+
+                        // Check for defeat
+                        if (newPlayerHealth <= 0 && prev.player.health > 0) {
+                            setTimeout(() => {
+                                window.SoundSystem.defeat();
+                                setShowDefeat(true);
+                            }, 500);
+                            return {
+                                ...prev,
+                                player: { ...prev.player, health: 0 },
+                                enemy: { ...prev.enemy, health: newEnemyHealth },
+                                playerCooldown: newPlayerCooldown,
+                                enemyCooldown: newEnemyCooldown,
+                                inBattle: false,
+                                combatLog: newCombatLog
+                            };
+                        }
+
+                        return {
+                            ...prev,
+                            player: { ...prev.player, health: newPlayerHealth },
+                            enemy: { ...prev.enemy, health: newEnemyHealth },
+                            playerCooldown: newPlayerCooldown,
+                            enemyCooldown: newEnemyCooldown,
+                            combatLog: newCombatLog
+                        };
+                    });
+
+                    // Auto-battle logic
+                    if (autoBattle) {
+                        setGameState(prev => {
+                            if (!prev.inBattle || prev.playerCooldown > 0) return prev;
+
+                            const playerHealthPct = prev.player.health / prev.player.maxHealth;
+                            if (playerHealthPct < 0.5 && prev.player.health < prev.player.maxHealth) {
+                                // Auto repair when low
+                                setTimeout(() => playerRepair(), 0);
+                            } else {
+                                // Auto attack
+                                setTimeout(() => playerAttack(), 0);
+                            }
+                            return prev;
+                        });
+                    }
+
+                    gameLoopRef.current = requestAnimationFrame(runGameLoop);
+                };
+
+                gameLoopRef.current = requestAnimationFrame(runGameLoop);
+
+                return () => {
+                    if (gameLoopRef.current) {
+                        cancelAnimationFrame(gameLoopRef.current);
+                    }
+                };
+            }, [gameState.inBattle, autoBattle]);
 
             // ============ TASK HANDLERS ============
             
@@ -932,13 +1243,16 @@
                 }));
             };
 
-            const showDamageNumber = (target, damage) => {
+            const showDamageNumber = (target, damage, isHeal = false) => {
                 const shipElement = target === 'player' ? playerShipRef.current : enemyShipRef.current;
                 if (!shipElement) return;
 
                 const damageNum = document.createElement('div');
                 damageNum.className = 'damage-number';
-                damageNum.textContent = `-${Math.floor(damage)}`;
+                damageNum.textContent = isHeal ? `+${Math.floor(damage)}` : `-${Math.floor(damage)}`;
+                if (isHeal) {
+                    damageNum.style.color = '#51cf66';
+                }
                 
                 const rect = shipElement.getBoundingClientRect();
                 damageNum.style.left = `${rect.left + rect.width / 2 - 30}px`;
@@ -984,8 +1298,9 @@
                         ...prev,
                         level: level,
                         inBattle: true,
-                        playerTurn: true,
                         isBoss,
+                        playerCooldown: 0,
+                        enemyCooldown: (isBoss ? 4.0 : Math.max(3.5 - level * 0.03, 2.5)) * 0.5,
                         bossData,
                         player: {
                             maxHealth: baseHealth,
@@ -1002,7 +1317,9 @@
                             cannons: Math.floor(1 + level / 3),
                             crew: Math.floor(3 + level / 2),
                             size: level > 8 ? 'Legendary' : level > 6 ? 'Massive' : level > 4 ? 'Large' : level > 2 ? 'Medium' : 'Small',
-                            damage: Math.floor(10 * scaleFactor * (isBoss ? 1.5 : 1))
+                            damage: Math.floor(10 * scaleFactor * (isBoss ? 1.5 : 1)),
+                            fireCooldown: isBoss ? 4.0 : Math.max(3.5 - level * 0.03, 2.5),
+                            repairThreshold: 0.4
                         },
                         combatLog: [isBoss ? `âš ï¸ BOSS BATTLE: ${bossData.name} approaches!` : 'âš“ Battle begins! Prepare for combat!']
                     }));
@@ -1010,9 +1327,9 @@
             };
 
             const playerAttack = () => {
-                if (!gameState.inBattle || !gameState.playerTurn) return;
-                
-                setGameState(prev => ({ ...prev, playerTurn: false }));
+                if (!gameState.inBattle || gameState.playerCooldown > 0) return;
+
+                setGameState(prev => ({ ...prev, playerCooldown: getPlayerCooldown() }));
                 window.SoundSystem.cannonFire();
                 
                 if (playerShipRef.current) {
@@ -1040,7 +1357,7 @@
                             };
                         }
                         
-                        setTimeout(() => enemyAttack(), 1500);
+                        // Real-time: enemy attacks via game loop
                         
                         return {
                             ...prev,
@@ -1050,62 +1367,19 @@
                 }, 600);
             };
 
-            const enemyAttack = () => {
-                window.SoundSystem.cannonFire();
-                
-                if (enemyShipRef.current) {
-                    enemyShipRef.current.classList.add('attacking');
-                    setTimeout(() => {
-                        if (enemyShipRef.current) enemyShipRef.current.classList.remove('attacking');
-                    }, 600);
-                }
-                
-                setTimeout(() => {
-                    const damage = gameState.enemy.damage + Math.random() * 5;
-                    showDamageNumber('player', damage);
-                    window.SoundSystem.shipHit();
-                    
-                    if (playerShipRef.current) {
-                        playerShipRef.current.classList.add('damaged');
-                        setTimeout(() => {
-                            if (playerShipRef.current) playerShipRef.current.classList.remove('damaged');
-                        }, 500);
-                    }
-                    
-                    addLog(`ðŸ’¥ Enemy fires back! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
-                    
-                    setGameState(prev => {
-                        const newHealth = prev.player.health - damage;
-                        
-                        if (newHealth <= 0) {
-                            setTimeout(() => {
-                                window.SoundSystem.defeat();
-                                setShowDefeat(true);
-                            }, 500);
-                            return {
-                                ...prev,
-                                player: { ...prev.player, health: 0 },
-                                inBattle: false
-                            };
-                        }
-                        
-                        return {
-                            ...prev,
-                            player: { ...prev.player, health: newHealth },
-                            playerTurn: true
-                        };
-                    });
-                }, 600);
-            };
+            // Enemy attacks are now handled by the real-time game loop
 
             const playerRepair = () => {
-                if (!gameState.inBattle || !gameState.playerTurn) return;
-                
-                setGameState(prev => ({ ...prev, playerTurn: false }));
+                if (!gameState.inBattle || gameState.playerCooldown > 0) return;
+                if (gameState.player.health >= gameState.player.maxHealth) return;
+
                 window.SoundSystem.shipRepair();
-                
-                const healAmount = gameState.player.repairAmount;
-                
+
+                // Start cooldown
+                setGameState(prev => ({ ...prev, playerCooldown: getPlayerCooldown() }));
+
+                const healAmount = Math.min(gameState.player.repairAmount, gameState.player.maxHealth - gameState.player.health);
+
                 setGameState(prev => ({
                     ...prev,
                     player: {
@@ -1113,10 +1387,9 @@
                         health: Math.min(prev.player.health + healAmount, prev.player.maxHealth)
                     }
                 }));
-                
-                addLog(`ðŸ”§ Your crew repairs! <span class="log-heal">+${healAmount} health</span>!`);
-                
-                setTimeout(() => enemyAttack(), 1000);
+
+                showDamageNumber('player', healAmount, true);
+                addLog(`ðŸ"§ Repaired! <span class="log-heal">+${healAmount}</span> HP!`);
             };
 
             const handleVictory = () => {
@@ -1674,23 +1947,59 @@
                                             </div>
                                         </div>
 
-                                        {/* Combat Actions */}
+                                        {/* Auto Battle Toggle */}
+                                        <div className="auto-battle-container">
+                                            <div
+                                                className="auto-battle-toggle"
+                                                onClick={() => setAutoBattle(!autoBattle)}
+                                            >
+                                                <span className="text-white font-semibold">Auto Battle</span>
+                                                <div className={`toggle-switch ${autoBattle ? 'active' : ''}`}></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Enemy Action Indicator */}
+                                        <div className="enemy-action-bar">
+                                            <div className="enemy-action-label">Enemy preparing to attack...</div>
+                                            <div className="enemy-cooldown-bar">
+                                                <div
+                                                    className="enemy-cooldown-fill"
+                                                    style={{width: `${gameState.enemy.fireCooldown > 0 ? ((1 - gameState.enemyCooldown / gameState.enemy.fireCooldown) * 100) : 0}%`}}
+                                                ></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Combat Actions with Cooldowns */}
                                         <div className="flex gap-4 justify-center mb-6 flex-wrap">
                                             <button
                                                 onClick={playerAttack}
-                                                disabled={!gameState.playerTurn}
+                                                disabled={gameState.playerCooldown > 0}
                                                 style={{fontFamily: 'Cinzel'}}
-                                                className="px-8 py-4 bg-gradient-to-r from-red-700 to-orange-600 text-white rounded-xl font-bold text-xl hover:from-red-600 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl border-2 border-yellow-500"
+                                                className={`battle-action-btn fire ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
                                             >
-                                                ðŸ’£ FIRE!
+                                                <div
+                                                    className="cooldown-overlay"
+                                                    style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
+                                                ></div>
+                                                <span className="btn-label">ðŸ'£ FIRE!</span>
+                                                <span className="cooldown-text">
+                                                    {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
+                                                </span>
                                             </button>
                                             <button
                                                 onClick={playerRepair}
-                                                disabled={!gameState.playerTurn}
+                                                disabled={gameState.playerCooldown > 0 || gameState.player.health >= gameState.player.maxHealth}
                                                 style={{fontFamily: 'Cinzel'}}
-                                                className="px-8 py-4 bg-gradient-to-r from-green-700 to-emerald-600 text-white rounded-xl font-bold text-xl hover:from-green-600 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl border-2 border-yellow-500"
+                                                className={`battle-action-btn repair ${gameState.playerCooldown <= 0 && gameState.player.health < gameState.player.maxHealth ? 'ready' : ''}`}
                                             >
-                                                ðŸ”§ REPAIR
+                                                <div
+                                                    className="cooldown-overlay"
+                                                    style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
+                                                ></div>
+                                                <span className="btn-label">ðŸ"§ REPAIR</span>
+                                                <span className="cooldown-text">
+                                                    {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
+                                                </span>
                                             </button>
                                         </div>
 
