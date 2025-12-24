@@ -387,6 +387,27 @@
             to { opacity: 0.6; }
         }
 
+        /* Save Error Toast */
+        .save-error-toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ef4444;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
         /* Chore Management Styles */
         .modal-overlay {
             position: fixed;
@@ -891,6 +912,108 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             z-index: 1;
         }
+
+        /* ============ MOBILE RESPONSIVE STYLES ============ */
+        @media (max-width: 768px) {
+            /* Navigation */
+            .nav-btn {
+                padding: 8px 12px;
+                font-size: 0.75rem;
+            }
+
+            /* Battle view adjustments */
+            .ship {
+                max-width: 280px;
+                height: 200px;
+            }
+
+            .battle-action-btn {
+                min-height: 70px;
+                min-width: 100px;
+                padding: 10px;
+            }
+
+            .battle-action-btn .btn-label {
+                font-size: 1rem;
+            }
+
+            .combat-log {
+                max-height: 100px;
+                font-size: 0.8rem;
+            }
+
+            /* Upgrade cards */
+            .upgrades-container {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .upgrade-card {
+                padding: 10px;
+            }
+
+            .upgrade-name {
+                font-size: 0.85rem;
+            }
+
+            .upgrade-btn {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+
+            /* Stats grid */
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            /* Modals */
+            .modal-content {
+                width: 95%;
+                max-width: 400px;
+                padding: 15px;
+            }
+
+            /* Chore cards */
+            .grid.grid-cols-2 {
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* Extra small screens */
+            .ship {
+                max-width: 200px;
+                height: 150px;
+            }
+
+            .battle-action-btn {
+                min-height: 60px;
+                min-width: 80px;
+            }
+
+            .upgrades-container {
+                grid-template-columns: 1fr;
+            }
+
+            /* Stack battle ships vertically on very small screens */
+            .grid.grid-cols-1.md\\:grid-cols-2 {
+                gap: 12px;
+            }
+
+            /* Reduce heading sizes */
+            h1 { font-size: 1.75rem !important; }
+            h2 { font-size: 1.25rem !important; }
+            h3 { font-size: 1rem !important; }
+
+            /* Enemy action bar */
+            .enemy-action-bar {
+                padding: 6px 10px;
+            }
+
+            .enemy-action-label {
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -916,7 +1039,7 @@
             masterGain.connect(audioContext.destination);
             isUnlocked = true;
             
-            console.log('🔊 Sound system initialized!');
+            // Sound system initialized
         };
         
         // Unlock audio on mobile (call from first user interaction)
@@ -1393,21 +1516,41 @@ const LOOT_TABLES = {
 
         // ============ UTILITY FUNCTIONS ============
 
-        const saveGame = (state) => {
+        const saveGame = (state, onError) => {
             try {
-                localStorage.setItem('chorequest_save_v3', JSON.stringify({
+                const data = JSON.stringify({
                     ...state,
                     savedAt: new Date().toISOString()
-                }));
+                });
+                localStorage.setItem('chorequest_save_v3', data);
+                return true;
             } catch (e) {
                 console.error('Failed to save game:', e);
+                if (onError) onError(e.message || 'Failed to save progress');
+                return false;
             }
         };
 
         const loadGame = () => {
             try {
                 const saved = localStorage.getItem('chorequest_save_v3');
-                return saved ? JSON.parse(saved) : null;
+                if (!saved) return null;
+                
+                const data = JSON.parse(saved);
+                
+                // Basic validation - ensure critical fields exist
+                if (typeof data !== 'object' || data === null) {
+                    console.warn('Invalid save data format');
+                    return null;
+                }
+                
+                // Ensure arrays are arrays (prevents crashes)
+                if (data.tasks && !Array.isArray(data.tasks)) data.tasks = [];
+                if (data.inventory && !Array.isArray(data.inventory)) data.inventory = [];
+                if (data.ownedShips && !Array.isArray(data.ownedShips)) data.ownedShips = ['starter'];
+                if (data.lootInventory && !Array.isArray(data.lootInventory)) data.lootInventory = [];
+                
+                return data;
             } catch (e) {
                 console.error('Failed to load game:', e);
                 return null;
@@ -1437,6 +1580,9 @@ const LOOT_TABLES = {
         };
 
         const createConfetti = () => {
+            // Clear any existing confetti first to prevent accumulation
+            document.querySelectorAll('.confetti-piece').forEach(p => p.remove());
+            
             const colors = ['#ff6b35', '#f4d03f', '#9333ea', '#3b82f6', '#51cf66', '#ff69b4'];
             const confettiPieces = [];
             
@@ -1470,6 +1616,7 @@ const LOOT_TABLES = {
             const [streak, setStreak] = useState(savedGame?.streak || 0);
             const [lastPlayDate, setLastPlayDate] = useState(savedGame?.lastPlayDate || null);
             const [soundEnabled, setSoundEnabled] = useState(savedGame?.soundEnabled !== false);
+            const [saveError, setSaveError] = useState(null);
             
             const [avatar, setAvatar] = useState(savedGame?.avatar || {
                 skin: 'default', outfit: 'casual', accessory: 'none'
@@ -1625,6 +1772,10 @@ const LOOT_TABLES = {
                     battlesSinceRare, soundEnabled, autoBattle, shipStats,
                     parentPassword, savedChores, pendingApproval,
                     gameState: { level: gameState.level }
+                }, (errorMsg) => {
+                    setSaveError(errorMsg);
+                    // Auto-clear error after 5 seconds
+                    setTimeout(() => setSaveError(null), 5000);
                 });
             }, [gems, loot, tasks, streak, avatar, inventory, currentShip, ownedShips, equipped, lootInventory, figureheads, battlesSinceRare, gameState.level, soundEnabled, autoBattle, shipStats, parentPassword, savedChores, pendingApproval]);
 
@@ -2181,6 +2332,39 @@ const LOOT_TABLES = {
                 }));
             };
 
+            // Safe log renderer - parses log strings and renders without dangerouslySetInnerHTML
+            const renderLogEntry = (log) => {
+                // Parse simple patterns: <span class="log-damage">X</span> and <span class="log-heal">X</span>
+                const parts = [];
+                let remaining = log;
+                let key = 0;
+                
+                const spanRegex = /<span class="(log-damage|log-heal)">([^<]+)<\/span>/g;
+                let lastIndex = 0;
+                let match;
+                
+                while ((match = spanRegex.exec(log)) !== null) {
+                    // Add text before the match
+                    if (match.index > lastIndex) {
+                        parts.push(<span key={key++}>{log.slice(lastIndex, match.index)}</span>);
+                    }
+                    // Add the styled span
+                    parts.push(
+                        <span key={key++} className={match[1]}>
+                            {match[2]}
+                        </span>
+                    );
+                    lastIndex = match.index + match[0].length;
+                }
+                
+                // Add remaining text
+                if (lastIndex < log.length) {
+                    parts.push(<span key={key++}>{log.slice(lastIndex)}</span>);
+                }
+                
+                return parts.length > 0 ? parts : log;
+            };
+
             const showDamageNumber = (target, damage, isHeal = false) => {
                 const shipElement = target === 'player' ? playerShipRef.current : enemyShipRef.current;
                 if (!shipElement) return;
@@ -2193,16 +2377,18 @@ const LOOT_TABLES = {
                 }
                 
                 const rect = shipElement.getBoundingClientRect();
-                damageNum.style.left = `${rect.left + rect.width / 2 - 30}px`;
-                damageNum.style.top = `${rect.top + 50}px`;
+                // Constrain to viewport to prevent off-screen numbers
+                const left = Math.max(10, Math.min(window.innerWidth - 70, rect.left + rect.width / 2 - 30));
+                const top = Math.max(10, rect.top + 50);
+                damageNum.style.left = `${left}px`;
+                damageNum.style.top = `${top}px`;
                 
                 document.body.appendChild(damageNum);
                 
-                setTimeout(() => {
-                    if (document.body.contains(damageNum)) {
-                        document.body.removeChild(damageNum);
-                    }
-                }, 1000);
+                // Use animation end event with fallback timeout for cleanup
+                const cleanup = () => damageNum.remove();
+                damageNum.addEventListener('animationend', cleanup, { once: true });
+                setTimeout(cleanup, 1500); // Fallback cleanup
             };
 
             const startBattle = (overrideLevel = null) => {
@@ -2526,6 +2712,13 @@ const LOOT_TABLES = {
                     >
                         {soundEnabled ? '🔊' : '🔇'}
                     </button>
+
+                    {/* Save Error Toast */}
+                    {saveError && (
+                        <div className="save-error-toast">
+                            ⚠️ {saveError}
+                        </div>
+                    )}
 
                     {currentView === 'battle' && (
                         <div className="ocean-waves">
@@ -3055,7 +3248,7 @@ const LOOT_TABLES = {
                                         {/* Combat Log */}
                                         <div className="combat-log text-white">
                                             {gameState.combatLog.map((log, idx) => (
-                                                <div key={idx} className="log-entry" dangerouslySetInnerHTML={{__html: log}}></div>
+                                                <div key={idx} className="log-entry">{renderLogEntry(log)}</div>
                                             ))}
                                         </div>
                                     </>
