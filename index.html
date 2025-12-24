@@ -24,6 +24,8 @@
             --legendary-purple: #9333ea;
             --rare-blue: #3b82f6;
             --common-gray: #6b7280;
+            --health-green: #51cf66;
+            --gold-dark: #b8960c;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -672,6 +674,146 @@
             font-weight: 600;
             color: #374151;
         }
+
+        /* Ship Upgrade System Styles */
+        .upgrades-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .upgrade-card {
+            background: linear-gradient(135deg, rgba(61, 35, 20, 0.9), rgba(93, 58, 26, 0.9));
+            border: 2px solid var(--gold-dark);
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .upgrade-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upgrade-level {
+            background: var(--gold-dark);
+            color: var(--wood-dark);
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .upgrade-description {
+            font-size: 0.85rem;
+            color: #bdc3c7;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stat-current {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .stat-arrow {
+            color: var(--health-green);
+            font-size: 1.2rem;
+        }
+
+        .stat-next {
+            color: var(--health-green);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .upgrade-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            border: none;
+            border-radius: 10px;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--wood-dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .upgrade-btn:disabled {
+            background: #555;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .upgrade-btn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 208, 63, 0.4);
+        }
+
+        .stats-summary {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stats-summary h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            color: #bdc3c7;
+        }
+
+        .stat-value {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .log-gold { color: var(--gold); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -1258,7 +1400,46 @@
             const [lootInventory, setLootInventory] = useState(savedGame?.lootInventory || []);
             const [figureheads, setFigureheads] = useState(savedGame?.figureheads || []);
             const [battlesSinceRare, setBattlesSinceRare] = useState(savedGame?.battlesSinceRare || 0);
-            
+
+            // Ship upgrade stats
+            const [shipStats, setShipStats] = useState(savedGame?.shipStats || {
+                firepower: { level: 1, base: 15, perLevel: 5 },
+                crew: { level: 1, base: 0, perLevel: 5 },      // % cooldown reduction
+                hull: { level: 1, base: 100, perLevel: 20 },
+                repair: { level: 1, base: 20, perLevel: 5 }
+            });
+
+            // Upgrade cost calculation (triangular formula)
+            const getUpgradeCost = (level) => {
+                const base = 10;
+                return base * (level + 1);
+            };
+
+            // Get computed stats from upgrade levels
+            const getComputedStats = useCallback(() => {
+                return {
+                    damage: shipStats.firepower.base + (shipStats.firepower.level - 1) * shipStats.firepower.perLevel,
+                    cooldownReduction: shipStats.crew.base + (shipStats.crew.level - 1) * shipStats.crew.perLevel,
+                    maxHealth: shipStats.hull.base + (shipStats.hull.level - 1) * shipStats.hull.perLevel,
+                    repairAmount: shipStats.repair.base + (shipStats.repair.level - 1) * shipStats.repair.perLevel
+                };
+            }, [shipStats]);
+
+            // Purchase upgrade
+            const purchaseUpgrade = (statKey) => {
+                const stat = shipStats[statKey];
+                const cost = getUpgradeCost(stat.level);
+
+                if (loot >= cost) {
+                    setLoot(l => l - cost);
+                    setShipStats(prev => ({
+                        ...prev,
+                        [statKey]: { ...prev[statKey], level: prev[statKey].level + 1 }
+                    }));
+                    window.SoundSystem.levelUp();
+                }
+            };
+
             const [gameState, setGameState] = useState({
                 level: savedGame?.gameState?.level || 1,
                 player: {
@@ -1355,11 +1536,11 @@
                 saveGame({
                     gems, loot, tasks, streak, lastPlayDate, avatar, inventory,
                     currentShip, ownedShips, equipped, lootInventory, figureheads,
-                    battlesSinceRare, soundEnabled, autoBattle,
+                    battlesSinceRare, soundEnabled, autoBattle, shipStats,
                     parentPassword, savedChores, pendingApproval,
                     gameState: { level: gameState.level }
                 });
-            }, [gems, loot, tasks, streak, avatar, inventory, currentShip, ownedShips, equipped, lootInventory, figureheads, battlesSinceRare, gameState.level, soundEnabled, autoBattle, parentPassword, savedChores, pendingApproval]);
+            }, [gems, loot, tasks, streak, avatar, inventory, currentShip, ownedShips, equipped, lootInventory, figureheads, battlesSinceRare, gameState.level, soundEnabled, autoBattle, shipStats, parentPassword, savedChores, pendingApproval]);
 
             // Daily reset
             useEffect(() => {
@@ -1392,10 +1573,11 @@
 
             const getPlayerCooldown = useCallback(() => {
                 const shipIndex = SHIP_PROGRESSION.findIndex(s => s.id === currentShip);
-                const crewBonus = shipIndex * 5; // 5% reduction per ship tier
-                const reduction = crewBonus / 100;
-                return Math.max(gameState.baseCooldown * (1 - reduction), 0.8);
-            }, [currentShip, gameState.baseCooldown]);
+                const shipBonus = shipIndex * 5; // 5% reduction per ship tier
+                const crewBonus = shipStats.crew.base + (shipStats.crew.level - 1) * shipStats.crew.perLevel;
+                const totalReduction = (shipBonus + crewBonus) / 100;
+                return Math.max(gameState.baseCooldown * (1 - totalReduction), 0.8);
+            }, [currentShip, gameState.baseCooldown, shipStats.crew]);
 
             // ============ REAL-TIME GAME LOOP ============
 
@@ -1427,13 +1609,13 @@
                                 // Enemy repairs
                                 const healAmount = Math.min(10 + Math.floor(prev.level / 2) * 5, prev.enemy.maxHealth - prev.enemy.health);
                                 newEnemyHealth = prev.enemy.health + healAmount;
-                                newCombatLog = [`📝§ Enemy repairs! <span class="log-heal">+${healAmount}</span> HP!`, ...newCombatLog].slice(0, 10);
+                                newCombatLog = [`🔧 Enemy repairs! <span class="log-heal">+${healAmount}</span> HP!`, ...newCombatLog].slice(0, 10);
                                 window.SoundSystem.shipRepair();
                             } else {
                                 // Enemy attacks
                                 const damage = prev.enemy.damage + Math.random() * 3;
                                 newPlayerHealth = Math.max(0, prev.player.health - damage);
-                                newCombatLog = [`🐍'¥ Enemy fires! <span class="log-damage">-${Math.floor(damage)}</span> damage!`, ...newCombatLog].slice(0, 10);
+                                newCombatLog = [`💥 Enemy fires! <span class="log-damage">-${Math.floor(damage)}</span> damage!`, ...newCombatLog].slice(0, 10);
                                 window.SoundSystem.cannonFire();
                                 setTimeout(() => window.SoundSystem.shipHit(), 200);
 
@@ -1915,8 +2097,13 @@
                 const currentShipData = SHIP_PROGRESSION.find(s => s.id === currentShip);
                 const shipIndex = SHIP_PROGRESSION.findIndex(s => s.id === currentShip);
                 
-                const baseDamage = 15 + (shipIndex * 5) + getTotalPower();
-                const baseHealth = 100 + (shipIndex * 25);
+                // Get upgrade-based stats
+                const upgradeStats = getComputedStats();
+
+                // Combine ship tier bonuses with upgrade bonuses
+                const baseDamage = upgradeStats.damage + (shipIndex * 5) + getTotalPower();
+                const baseHealth = upgradeStats.maxHealth + (shipIndex * 25);
+                const baseRepair = upgradeStats.repairAmount + (shipIndex * 5);
                 
                 const scaleFactor = 1 + (level * 0.3);
                 const bossMultiplier = isBoss ? bossData.healthMultiplier : 1;
@@ -1949,7 +2136,7 @@
                             crew: 5 + shipIndex * 2,
                             size: currentShipData?.size || 'tiny',
                             damage: baseDamage,
-                            repairAmount: 20 + shipIndex * 5
+                            repairAmount: baseRepair
                         },
                         enemy: {
                             maxHealth: Math.floor(50 * scaleFactor * bossMultiplier),
@@ -2029,7 +2216,7 @@
                 }));
 
                 showDamageNumber('player', healAmount, true);
-                addLog(`📝§ Repaired! <span class="log-heal">+${healAmount}</span> HP!`);
+                addLog(`🔧 Repaired! <span class="log-heal">+${healAmount}</span> HP!`);
             };
 
             const handleVictory = () => {
@@ -2530,11 +2717,73 @@
                                         <div className="text-gray-400 text-center py-4">Win battles to collect loot!</div>
                                     )}
 
-                                    {loot >= 50 && (
-                                        <div className="mt-4 p-4 bg-yellow-600 rounded-xl text-center">
-                                            <span className="text-white font-bold">🔧 Ship Upgrades Coming Soon! ({loot} loot saved)</span>
+                                    {/* Ship Upgrades Section */}
+                                    <h3 className="text-xl font-bold text-white mb-3 mt-6">🔧 Ship Upgrades</h3>
+                                    <div className="text-center text-yellow-400 mb-4">
+                                        🪙 Loot Available: <span className="font-bold text-2xl">{loot}</span>
+                                    </div>
+
+                                    {/* Stats Summary */}
+                                    <div className="stats-summary mb-4">
+                                        <h3>Current Stats</h3>
+                                        <div className="stats-grid">
+                                            <div className="stat-item">
+                                                <span className="stat-label">💥 Damage</span>
+                                                <span className="stat-value">{getComputedStats().damage}</span>
+                                            </div>
+                                            <div className="stat-item">
+                                                <span className="stat-label">⚡ Cooldown</span>
+                                                <span className="stat-value">-{getComputedStats().cooldownReduction}%</span>
+                                            </div>
+                                            <div className="stat-item">
+                                                <span className="stat-label">❤️ Max HP</span>
+                                                <span className="stat-value">{getComputedStats().maxHealth}</span>
+                                            </div>
+                                            <div className="stat-item">
+                                                <span className="stat-label">🔧 Repair</span>
+                                                <span className="stat-value">{getComputedStats().repairAmount}</span>
+                                            </div>
                                         </div>
-                                    )}
+                                    </div>
+
+                                    {/* Upgrade Cards */}
+                                    <div className="upgrades-container">
+                                        {[
+                                            { key: 'firepower', name: '💥 Firepower', desc: 'Damage dealt per cannon shot', unit: ' dmg' },
+                                            { key: 'crew', name: '⚡ Crew', desc: 'Reduces ALL action cooldowns', unit: '%' },
+                                            { key: 'hull', name: '🛡️ Hull Strength', desc: 'Maximum ship health', unit: ' HP' },
+                                            { key: 'repair', name: '🔧 Repair Kit', desc: 'Health restored per repair', unit: ' HP' }
+                                        ].map(upgrade => {
+                                            const stat = shipStats[upgrade.key];
+                                            const currentValue = stat.base + (stat.level - 1) * stat.perLevel;
+                                            const nextValue = currentValue + stat.perLevel;
+                                            const cost = getUpgradeCost(stat.level);
+                                            const canAfford = loot >= cost;
+
+                                            return (
+                                                <div key={upgrade.key} className="upgrade-card">
+                                                    <div className="upgrade-header">
+                                                        <span className="upgrade-name">{upgrade.name}</span>
+                                                        <span className="upgrade-level">Lv. {stat.level}</span>
+                                                    </div>
+                                                    <div className="upgrade-description">{upgrade.desc}</div>
+                                                    <div className="upgrade-stats">
+                                                        <span className="stat-current">{currentValue}{upgrade.unit}</span>
+                                                        <span className="stat-arrow">→</span>
+                                                        <span className="stat-next">{nextValue}{upgrade.unit}</span>
+                                                    </div>
+                                                    <button
+                                                        className="upgrade-btn"
+                                                        onClick={() => purchaseUpgrade(upgrade.key)}
+                                                        disabled={!canAfford}
+                                                    >
+                                                        <span>🪙 {cost}</span>
+                                                        <span>UPGRADE</span>
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -2647,7 +2896,7 @@
                                                     className="cooldown-overlay"
                                                     style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
                                                 ></div>
-                                                <span className="btn-label">🐍'£ FIRE!</span>
+                                                <span className="btn-label">💣 FIRE!</span>
                                                 <span className="cooldown-text">
                                                     {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
                                                 </span>
@@ -2662,7 +2911,7 @@
                                                     className="cooldown-overlay"
                                                     style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
                                                 ></div>
-                                                <span className="btn-label">📝§ REPAIR</span>
+                                                <span className="btn-label">🔧 REPAIR</span>
                                                 <span className="cooldown-text">
                                                     {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
                                                 </span>
