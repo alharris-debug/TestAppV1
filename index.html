@@ -2786,147 +2786,9 @@ const LOOT_TABLES = {
                                     )}
                                 </div>
 
-                                {/* Figureheads */}
-                                <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-3xl p-6 border-4 border-purple-500">
-                                    <h2 className="text-3xl font-bold text-white mb-6">🏆 Figureheads (Boss Trophies)</h2>
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                        {Object.values(BOSS_BATTLES).map(boss => {
-                                            const owned = figureheads.find(f => f.id === boss.figurehead.id);
-                                            const isEquipped = equipped.figurehead?.id === boss.figurehead.id;
-                                            
-                                            return (
-                                                <div
-                                                    key={boss.figurehead.id}
-                                                    onClick={() => owned && equipFigurehead(boss.figurehead)}
-                                                    className={`p-4 rounded-xl text-center transition-all ${
-                                                        isEquipped ? 'bg-yellow-500 scale-105 ring-4 ring-yellow-300 cursor-pointer'
-                                                        : owned ? 'bg-purple-700 hover:bg-purple-600 cursor-pointer'
-                                                        : 'bg-gray-800 opacity-50'
-                                                    }`}
-                                                >
-                                                    <div className="text-4xl mb-2">{owned ? boss.figurehead.emoji : '❔'}</div>
-                                                    <div className="text-white font-bold text-xs">{owned ? boss.figurehead.name : '???'}</div>
-                                                    {isEquipped && <div className="text-xs mt-1 text-yellow-200">EQUIPPED</div>}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+{/* Figureheads section hidden for now */}
 
-                                {/* Equipment */}
-                                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 border-4 border-gray-600">
-                                    <h2 className="text-3xl font-bold text-white mb-4">âš”️ Equipment</h2>
-                                    <div className="text-xl text-yellow-400 mb-4">Total Power: ⚡{getTotalPower()}</div>
-                                    
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                        {['hull', 'sails', 'cannons', 'figurehead'].map(slot => (
-                                            <div key={slot} className="bg-gray-700 rounded-xl p-4 text-center">
-                                                <div className="text-gray-400 text-sm capitalize mb-2">{slot}</div>
-                                                {equipped[slot] ? (
-                                                    <>
-                                                        <div className="text-3xl">{equipped[slot].emoji}</div>
-                                                        <div className="text-white text-sm font-bold">{equipped[slot].name}</div>
-                                                        {equipped[slot].power && (
-                                                            <div className="text-yellow-400 text-xs">+{equipped[slot].power} power</div>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <div className="text-gray-500 text-2xl">—</div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Loot Inventory */}
-                                    <h3 className="text-xl font-bold text-white mb-3">Loot Inventory</h3>
-                                    {lootInventory.length > 0 ? (
-                                        <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-                                            {lootInventory.map((item, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => equipLoot(item)}
-                                                    className={`p-2 rounded-lg cursor-pointer transition-all hover:scale-110 ${
-                                                        item.rarity === 'legendary' ? 'bg-purple-600 legendary-glow'
-                                                        : item.rarity === 'rare' ? 'bg-blue-600 rare-glow'
-                                                        : 'bg-gray-600'
-                                                    }`}
-                                                    title={`${item.name} (+${item.power})`}
-                                                >
-                                                    <div className="text-2xl text-center">{item.emoji}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-gray-400 text-center py-4">Win battles to collect loot!</div>
-                                    )}
-
-                                    {/* Ship Upgrades Section */}
-                                    <h3 className="text-xl font-bold text-white mb-3 mt-6">🔧 Ship Upgrades</h3>
-                                    <div className="text-center text-yellow-400 mb-4">
-                                        🪙 Loot Available: <span className="font-bold text-2xl">{loot}</span>
-                                    </div>
-
-                                    {/* Stats Summary */}
-                                    <div className="stats-summary mb-4">
-                                        <h3>Current Stats</h3>
-                                        <div className="stats-grid">
-                                            <div className="stat-item">
-                                                <span className="stat-label">💥 Damage</span>
-                                                <span className="stat-value">{getComputedStats().damage}</span>
-                                            </div>
-                                            <div className="stat-item">
-                                                <span className="stat-label">⚡ Cooldown</span>
-                                                <span className="stat-value">-{getComputedStats().cooldownReduction}%</span>
-                                            </div>
-                                            <div className="stat-item">
-                                                <span className="stat-label">❤️ Max HP</span>
-                                                <span className="stat-value">{getComputedStats().maxHealth}</span>
-                                            </div>
-                                            <div className="stat-item">
-                                                <span className="stat-label">🔧 Repair</span>
-                                                <span className="stat-value">{getComputedStats().repairAmount}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Upgrade Cards */}
-                                    <div className="upgrades-container">
-                                        {[
-                                            { key: 'firepower', name: '💥 Firepower', desc: 'Damage dealt per cannon shot', unit: ' dmg' },
-                                            { key: 'crew', name: '⚡ Crew', desc: 'Reduces ALL action cooldowns', unit: '%' },
-                                            { key: 'hull', name: '🛡️ Hull Strength', desc: 'Maximum ship health', unit: ' HP' },
-                                            { key: 'repair', name: '🔧 Repair Kit', desc: 'Health restored per repair', unit: ' HP' }
-                                        ].map(upgrade => {
-                                            const stat = shipStats[upgrade.key];
-                                            const currentValue = stat.base + (stat.level - 1) * stat.perLevel;
-                                            const nextValue = currentValue + stat.perLevel;
-                                            const cost = getUpgradeCost(stat.level);
-                                            const canAfford = loot >= cost;
-
-                                            return (
-                                                <div key={upgrade.key} className="upgrade-card">
-                                                    <div className="upgrade-header">
-                                                        <span className="upgrade-name">{upgrade.name}</span>
-                                                        <span className="upgrade-level">Lv. {stat.level}</span>
-                                                    </div>
-                                                    <div className="upgrade-description">{upgrade.desc}</div>
-                                                    <div className="upgrade-stats">
-                                                        <span className="stat-current">{currentValue}{upgrade.unit}</span>
-                                                        <span className="stat-arrow">→</span>
-                                                        <span className="stat-next">{nextValue}{upgrade.unit}</span>
-                                                    </div>
-                                                    <button
-                                                        className="upgrade-btn"
-                                                        onClick={() => purchaseUpgrade(upgrade.key)}
-                                                        disabled={!canAfford}
-                                                    >
-                                                        <span>🪙 {cost}</span>
-                                                        <span>UPGRADE</span>
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                {/* Equipment and Loot sections hidden for now */}
                                 </div>
                             </div>
                         )}
@@ -2983,17 +2845,89 @@ const LOOT_TABLES = {
                                         </button>
                                     </div>
                                 ) : gameState.battlePhase === BATTLE_PHASES.IDLE ? (
-                                    <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-12 text-center">
-                                        <div className="text-6xl mb-4">{currentShipData?.emoji || '🚣'}</div>
-                                        <div className="text-2xl text-white mb-4">{currentShipData?.name || 'Rusty Raft'}</div>
-                                        <div className="text-yellow-400 mb-6">⚡ Power: {getTotalPower()}</div>
-                                        <button
-                                            onClick={() => startBattle()}
-                                            style={{fontFamily: 'Cinzel'}}
-                                            className="px-12 py-6 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-2xl font-bold text-3xl hover:scale-105 transition-transform shadow-2xl"
-                                        >
-                                            🏴‍☠️ START BATTLE 🏴‍☠️
-                                        </button>
+                                    <div className="space-y-6">
+                                        {/* Ship Preview & Start Battle */}
+                                        <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-8 text-center">
+                                            <div className="text-6xl mb-4">{currentShipData?.emoji || '🚣'}</div>
+                                            <div className="text-2xl text-white mb-4">{currentShipData?.name || 'Rusty Raft'}</div>
+                                            <div className="text-yellow-400 mb-6">⚡ Power: {getTotalPower()}</div>
+                                            <button
+                                                onClick={() => startBattle()}
+                                                style={{fontFamily: 'Cinzel'}}
+                                                className="px-12 py-6 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-2xl font-bold text-3xl hover:scale-105 transition-transform shadow-2xl"
+                                            >
+                                                🏴‍☠️ START BATTLE 🏴‍☠️
+                                            </button>
+                                        </div>
+
+                                        {/* Ship Upgrades Section */}
+                                        <div className="bg-opacity-40 bg-gray-900 backdrop-blur rounded-3xl p-6 border-4 border-yellow-600">
+                                            <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-center">🔧 Ship Upgrades</h3>
+                                            <div className="text-center text-yellow-300 mb-4">
+                                                🪙 Loot Available: <span className="font-bold text-2xl">{loot}</span>
+                                            </div>
+
+                                            {/* Stats Summary */}
+                                            <div className="stats-summary mb-4">
+                                                <div className="stats-grid">
+                                                    <div className="stat-item">
+                                                        <span className="stat-label">💥 Damage</span>
+                                                        <span className="stat-value">{getComputedStats().damage}</span>
+                                                    </div>
+                                                    <div className="stat-item">
+                                                        <span className="stat-label">⚡ Cooldown</span>
+                                                        <span className="stat-value">-{getComputedStats().cooldownReduction}%</span>
+                                                    </div>
+                                                    <div className="stat-item">
+                                                        <span className="stat-label">❤️ Max HP</span>
+                                                        <span className="stat-value">{getComputedStats().maxHealth}</span>
+                                                    </div>
+                                                    <div className="stat-item">
+                                                        <span className="stat-label">🔧 Repair</span>
+                                                        <span className="stat-value">{getComputedStats().repairAmount}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Upgrade Cards */}
+                                            <div className="upgrades-container">
+                                                {[
+                                                    { key: 'firepower', name: '💥 Firepower', desc: 'Damage per shot', unit: ' dmg' },
+                                                    { key: 'crew', name: '⚡ Crew', desc: 'Cooldown reduction', unit: '%' },
+                                                    { key: 'hull', name: '🛡️ Hull', desc: 'Max health', unit: ' HP' },
+                                                    { key: 'repair', name: '🔧 Repair', desc: 'Health per repair', unit: ' HP' }
+                                                ].map(upgrade => {
+                                                    const stat = shipStats[upgrade.key];
+                                                    const currentValue = stat.base + (stat.level - 1) * stat.perLevel;
+                                                    const nextValue = currentValue + stat.perLevel;
+                                                    const cost = getUpgradeCost(stat.level);
+                                                    const canAfford = loot >= cost;
+
+                                                    return (
+                                                        <div key={upgrade.key} className="upgrade-card">
+                                                            <div className="upgrade-header">
+                                                                <span className="upgrade-name">{upgrade.name}</span>
+                                                                <span className="upgrade-level">Lv. {stat.level}</span>
+                                                            </div>
+                                                            <div className="upgrade-description">{upgrade.desc}</div>
+                                                            <div className="upgrade-stats">
+                                                                <span className="stat-current">{currentValue}{upgrade.unit}</span>
+                                                                <span className="stat-arrow">→</span>
+                                                                <span className="stat-next">{nextValue}{upgrade.unit}</span>
+                                                            </div>
+                                                            <button
+                                                                className="upgrade-btn"
+                                                                onClick={() => purchaseUpgrade(upgrade.key)}
+                                                                disabled={!canAfford}
+                                                            >
+                                                                <span>🪙 {cost}</span>
+                                                                <span>UPGRADE</span>
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <>
