@@ -1275,7 +1275,16 @@
             { id: 'destroyer', name: "Ultimate Destroyer", cost: 3000, size: "legendary", emoji: "👑", description: "The pinnacle of power" }
         ];
 
-        const LOOT_TABLES = {
+        
+            // Battle phase states for clearer state machine
+            const BATTLE_PHASES = {
+                IDLE: 'IDLE',           // Not in battle, can start new battle
+                FIGHTING: 'FIGHTING',   // Active battle in progress
+                VICTORY: 'VICTORY',     // Battle won, showing victory screen
+                DEFEAT: 'DEFEAT'        // Battle lost, showing defeat screen
+            };
+
+const LOOT_TABLES = {
             hull: {
                 common: [
                     { name: "Iron Nails", power: 5, emoji: "🔩" },
@@ -1528,7 +1537,7 @@
                     maxHealth: 50, health: 50, cannons: 1, crew: 3,
                     size: 'Small', damage: 10, fireCooldown: 3.5, repairThreshold: 0.4
                 },
-                inBattle: false, combatLog: [],
+                battlePhase: BATTLE_PHASES.IDLE, combatLog: [],
                 isBoss: false, bossData: null,
                 // Real-time battle cooldowns
                 playerCooldown: 0,
@@ -1539,13 +1548,12 @@
             const [autoBattle, setAutoBattle] = useState(savedGame?.autoBattle || false);
             const lastTimeRef = useRef(0);
             const gameLoopRef = useRef(null);
-            const attackInProgressRef = useRef(false);  // Prevents multi-click damage bug
+            const actionInProgressRef = useRef(false);  // Prevents multi-click bugs in attack/repair
 
             const [showLootReveal, setShowLootReveal] = useState(false);
             const [currentLoot, setCurrentLoot] = useState(null);
             const [lootRevealed, setLootRevealed] = useState(false);
-            const [showVictory, setShowVictory] = useState(false);
-            const [showDefeat, setShowDefeat] = useState(false);
+            // Victory/Defeat now handled by gameState.battlePhase
             const [showBossIntro, setShowBossIntro] = useState(false);
             const [showFigureheadUnlock, setShowFigureheadUnlock] = useState(false);
             const [unlockedFigurehead, setUnlockedFigurehead] = useState(null);
@@ -1671,7 +1679,7 @@
             // ============ REAL-TIME GAME LOOP ============
 
             useEffect(() => {
-                if (!gameState.inBattle) {
+                if (gameState.battlePhase !== BATTLE_PHASES.FIGHTING) {
                     lastTimeRef.current = 0;
                     return;
                 }
@@ -1682,7 +1690,7 @@
                     lastTimeRef.current = currentTime;
 
                     setGameState(prev => {
-                        if (!prev.inBattle) return prev;
+                        if (prev.battlePhase !== BATTLE_PHASES.FIGHTING) return prev;
 
                         let newPlayerCooldown = Math.max(0, prev.playerCooldown - delta);
                         let newEnemyCooldown = Math.max(0, prev.enemyCooldown - delta);
@@ -1724,15 +1732,14 @@
                         if (newPlayerHealth <= 0 && prev.player.health > 0) {
                             setTimeout(() => {
                                 window.SoundSystem.defeat();
-                                setShowDefeat(true);
                             }, 500);
                             return {
                                 ...prev,
+                                battlePhase: BATTLE_PHASES.DEFEAT,
                                 player: { ...prev.player, health: 0 },
                                 enemy: { ...prev.enemy, health: newEnemyHealth },
                                 playerCooldown: newPlayerCooldown,
                                 enemyCooldown: newEnemyCooldown,
-                                inBattle: false,
                                 combatLog: newCombatLog
                             };
                         }
@@ -1750,7 +1757,7 @@
                     // Auto-battle logic
                     if (autoBattle) {
                         setGameState(prev => {
-                            if (!prev.inBattle || prev.playerCooldown > 0) return prev;
+                            if (prev.battlePhase !== BATTLE_PHASES.FIGHTING || prev.playerCooldown > 0) return prev;
 
                             const playerHealthPct = prev.player.health / prev.player.maxHealth;
                             if (playerHealthPct < 0.5 && prev.player.health < prev.player.maxHealth) {
@@ -1774,7 +1781,7 @@
                         cancelAnimationFrame(gameLoopRef.current);
                     }
                 };
-            }, [gameState.inBattle, autoBattle]);
+            }, [gameState.battlePhase, autoBattle]);
 
             // ============ TASK HANDLERS ============
 
@@ -2233,7 +2240,7 @@
                     setGameState(prev => ({
                         ...prev,
                         level: level,
-                        inBattle: true,
+                        battlePhase: BATTLE_PHASES.FIGHTING,
                         isBoss,
                         playerCooldown: 0,
                         enemyCooldown: (isBoss ? 4.0 : Math.max(3.5 - level * 0.03, 2.5)) * 0.5,
@@ -2264,10 +2271,10 @@
 
             const playerAttack = () => {
                 // Prevent multi-click bug: check both state and ref
-                if (!gameState.inBattle || gameState.playerCooldown > 0 || attackInProgressRef.current) return;
+                if (gameState.battlePhase !== BATTLE_PHASES.FIGHTING || gameState.playerCooldown > 0 || actionInProgressRef.current) return;
 
                 // Lock attack immediately with ref (synchronous)
-                attackInProgressRef.current = true;
+                actionInProgressRef.current = true;
 
                 setGameState(prev => ({ ...prev, playerCooldown: getPlayerCooldown() }));
                 window.SoundSystem.cannonFire();
@@ -2293,8 +2300,8 @@
                             setTimeout(() => handleVictory(), 500);
                             return {
                                 ...prev,
-                                enemy: { ...prev.enemy, health: 0 },
-                                inBattle: false
+                                enemy: { ...prev.enemy, health: 0 }
+                                // Keep battlePhase as FIGHTING until loot is revealed
                             };
                         }
 
@@ -2305,33 +2312,44 @@
                     });
 
                     // Release attack lock after damage is applied
-                    attackInProgressRef.current = false;
+                    actionInProgressRef.current = false;
                 }, 600);
             };
 
             // Enemy attacks are now handled by the real-time game loop
 
             const playerRepair = () => {
-                if (!gameState.inBattle || gameState.playerCooldown > 0) return;
+                // Prevent spam clicking: check both state and ref
+                if (gameState.battlePhase !== BATTLE_PHASES.FIGHTING || gameState.playerCooldown > 0 || actionInProgressRef.current) return;
                 if (gameState.player.health >= gameState.player.maxHealth) return;
+
+                // Lock action immediately
+                actionInProgressRef.current = true;
 
                 window.SoundSystem.shipRepair();
 
-                // Start cooldown
-                setGameState(prev => ({ ...prev, playerCooldown: getPlayerCooldown() }));
+                // Single setGameState call with all updates and fresh state calculations
+                setGameState(prev => {
+                    const healAmount = Math.min(
+                        prev.player.repairAmount,
+                        prev.player.maxHealth - prev.player.health
+                    );
 
-                const healAmount = Math.min(gameState.player.repairAmount, gameState.player.maxHealth - gameState.player.health);
+                    showDamageNumber('player', healAmount, true);
+                    addLog(`🔧 Repaired! <span class="log-heal">+${Math.floor(healAmount)}</span> HP!`);
 
-                setGameState(prev => ({
-                    ...prev,
-                    player: {
-                        ...prev.player,
-                        health: Math.min(prev.player.health + healAmount, prev.player.maxHealth)
-                    }
-                }));
+                    return {
+                        ...prev,
+                        playerCooldown: getPlayerCooldown(),
+                        player: {
+                            ...prev.player,
+                            health: Math.min(prev.player.health + healAmount, prev.player.maxHealth)
+                        }
+                    };
+                });
 
-                showDamageNumber('player', healAmount, true);
-                addLog(`🔧 Repaired! <span class="log-heal">+${healAmount}</span> HP!`);
+                // Release action lock
+                actionInProgressRef.current = false;
             };
 
             const handleVictory = () => {
@@ -2394,19 +2412,17 @@
 
             const closeLootReveal = () => {
                 setShowLootReveal(false);
-                setShowVictory(true);
+                setGameState(prev => ({ ...prev, battlePhase: BATTLE_PHASES.VICTORY }));
                 window.SoundSystem.buttonClick();
             };
 
             const nextLevel = () => {
                 const newLevel = gameState.level + 1;
-                setShowVictory(false);
                 window.SoundSystem.levelUp();
                 startBattle(newLevel);
             };
 
             const restartBattle = () => {
-                setShowDefeat(false);
                 window.SoundSystem.buttonClick();
                 
                 // If boss fight lost, go back to start of the 10-level block
@@ -2929,7 +2945,7 @@
                                 </div>
 
                                 {/* Inline Victory State */}
-                                {showVictory ? (
+                                {gameState.battlePhase === BATTLE_PHASES.VICTORY ? (
                                     <div className="bg-gradient-to-br from-yellow-600 to-orange-600 rounded-3xl p-12 text-center border-8 border-yellow-400 shadow-2xl">
                                         <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
                                             🏆 VICTORY! 🏆
@@ -2943,7 +2959,7 @@
                                             NEXT LEVEL ⚔️
                                         </button>
                                     </div>
-                                ) : showDefeat ? (
+                                ) : gameState.battlePhase === BATTLE_PHASES.DEFEAT ? (
                                     <div className="bg-gradient-to-br from-red-900 to-black rounded-3xl p-12 text-center border-8 border-red-700 shadow-2xl">
                                         <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-red-500 mb-4">
                                             💀 DEFEATED 💀
@@ -2966,7 +2982,7 @@
                                             {gameState.isBoss ? 'BACK TO TRAINING ⚔️' : 'TRY AGAIN ⚔️'}
                                         </button>
                                     </div>
-                                ) : !gameState.inBattle ? (
+                                ) : gameState.battlePhase === BATTLE_PHASES.IDLE ? (
                                     <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-12 text-center">
                                         <div className="text-6xl mb-4">{currentShipData?.emoji || '🚣'}</div>
                                         <div className="text-2xl text-white mb-4">{currentShipData?.name || 'Rusty Raft'}</div>
