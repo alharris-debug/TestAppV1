@@ -383,70 +383,118 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .fun-password-display {
+        /* Pattern Lock Styles */
+        .pattern-lock-container {
             display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-            padding: 20px;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            border-radius: 16px;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
             margin: 16px 0;
+            touch-action: none;
+            user-select: none;
         }
 
-        .password-emoji {
-            font-size: 3rem;
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 50px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .pattern-dot {
+            width: 28px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            position: relative;
             cursor: pointer;
-            transition: transform 0.2s, filter 0.2s;
-            padding: 8px;
-            border-radius: 12px;
+            transition: all 0.15s ease;
+            z-index: 2;
         }
 
-        .password-emoji:hover {
-            transform: scale(1.2);
+        .pattern-dot::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: transparent;
         }
 
-        .password-emoji.selected {
-            background: linear-gradient(135deg, #a855f7, #ec4899);
-            transform: scale(1.1);
+        .pattern-dot.selected {
+            background: #a855f7;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.8), 0 0 40px rgba(168, 85, 247, 0.4);
+            transform: scale(1.4);
         }
 
-        .password-emoji.correct {
-            animation: emoji-bounce 0.5s ease;
-        }
-
-        @keyframes emoji-bounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-        }
-
-        .password-input-display {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            padding: 16px;
-            background: #f3f4f6;
-            border-radius: 12px;
-            min-height: 60px;
-            margin: 12px 0;
-        }
-
-        .password-slot {
+        .pattern-dot.selected::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             width: 50px;
             height: 50px;
-            background: white;
-            border: 3px dashed #d1d5db;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
+            border: 3px solid rgba(168, 85, 247, 0.4);
+            border-radius: 50%;
         }
 
-        .password-slot.filled {
-            border-style: solid;
-            border-color: #a855f7;
-            background: linear-gradient(135deg, #faf5ff, #fdf4ff);
+        .pattern-dot.error {
+            background: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+        }
+
+        .pattern-dot.success {
+            background: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+        }
+
+        .pattern-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .pattern-line {
+            stroke: #a855f7;
+            stroke-width: 4;
+            stroke-linecap: round;
+            fill: none;
+        }
+
+        .pattern-line.error {
+            stroke: #ef4444;
+        }
+
+        .pattern-line.success {
+            stroke: #10b981;
+        }
+
+        .pattern-hint {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .pattern-dots-count {
+            display: inline-block;
+            background: rgba(168, 85, 247, 0.3);
+            color: #a855f7;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 12px;
+            margin-top: 8px;
         }
 
         .chore-card {
@@ -1246,14 +1294,19 @@
             const [unlockedShip, setUnlockedShip] = useState(null);
 
             // ============ CHORE MANAGEMENT STATE ============
-            const FUN_PASSWORD_EMOJIS = ['🌟', '🎈', '🌈', '🦄', '🍕', '🎮', '🚀', '🎪', '🦋', '🍦', '⚡', '🎯'];
-
             const [parentPassword, setParentPassword] = useState(savedGame?.parentPassword || null);
             const [showPasswordSetup, setShowPasswordSetup] = useState(false);
             const [showPasswordEntry, setShowPasswordEntry] = useState(false);
-            const [passwordInput, setPasswordInput] = useState([]);
             const [passwordError, setPasswordError] = useState(false);
+            const [passwordSuccess, setPasswordSuccess] = useState(false);
             const [pendingPasswordAction, setPendingPasswordAction] = useState(null);
+
+            // Pattern lock state
+            const [patternInput, setPatternInput] = useState([]);
+            const [isDrawingPattern, setIsDrawingPattern] = useState(false);
+            const [currentPoint, setCurrentPoint] = useState(null);
+            const patternGridRef = useRef(null);
+            const dotRefs = useRef([]);
 
             const [savedChores, setSavedChores] = useState(savedGame?.savedChores || []);
             const [pendingApproval, setPendingApproval] = useState(savedGame?.pendingApproval || []);
@@ -1482,57 +1535,152 @@
 
             const CHORE_ICONS = ['📋', '🧹', '🍽️', '🛏️', '🐕', '🐱', '🧺', '📚', '🎹', '🌱', '🗑️', '🚿', '🦷', '👕', '🧸', '✏️'];
 
-            const verifyPassword = (input) => {
-                if (!parentPassword) return false;
-                return input.length === parentPassword.length &&
-                    input.every((emoji, idx) => emoji === parentPassword[idx]);
+            // Pattern lock helper functions
+            const getDotCenter = (dotIndex) => {
+                const dot = dotRefs.current[dotIndex];
+                const grid = patternGridRef.current;
+                if (!dot || !grid) return null;
+
+                const dotRect = dot.getBoundingClientRect();
+                const gridRect = grid.getBoundingClientRect();
+
+                return {
+                    x: dotRect.left + dotRect.width / 2 - gridRect.left,
+                    y: dotRect.top + dotRect.height / 2 - gridRect.top
+                };
             };
 
-            const handlePasswordInput = (emoji) => {
-                if (passwordInput.length >= 4) return;
+            const getPatternPath = (pattern, currentPt = null) => {
+                if (pattern.length === 0) return '';
 
-                const newInput = [...passwordInput, emoji];
-                setPasswordInput(newInput);
+                const points = pattern.map(idx => getDotCenter(idx)).filter(Boolean);
+                if (points.length === 0) return '';
+
+                let path = `M ${points[0].x} ${points[0].y}`;
+                for (let i = 1; i < points.length; i++) {
+                    path += ` L ${points[i].x} ${points[i].y}`;
+                }
+
+                if (currentPt && points.length > 0) {
+                    path += ` L ${currentPt.x} ${currentPt.y}`;
+                }
+
+                return path;
+            };
+
+            const verifyPattern = (input) => {
+                if (!parentPassword || !Array.isArray(parentPassword)) return false;
+                if (input.length !== parentPassword.length) return false;
+                return input.every((dot, idx) => dot === parentPassword[idx]);
+            };
+
+            const handlePatternStart = (dotIndex, e) => {
+                e.preventDefault();
+                setIsDrawingPattern(true);
+                setPatternInput([dotIndex]);
                 setPasswordError(false);
+                setPasswordSuccess(false);
+                window.SoundSystem.buttonClick();
+            };
 
-                if (newInput.length === 4) {
-                    if (showPasswordSetup) {
-                        // Setting up new password
-                        setParentPassword(newInput);
+            const handlePatternMove = (e) => {
+                if (!isDrawingPattern || !patternGridRef.current) return;
+
+                const grid = patternGridRef.current;
+                const gridRect = grid.getBoundingClientRect();
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                setCurrentPoint({
+                    x: clientX - gridRect.left,
+                    y: clientY - gridRect.top
+                });
+
+                // Check if we're over a new dot
+                dotRefs.current.forEach((dot, idx) => {
+                    if (!dot || patternInput.includes(idx)) return;
+
+                    const dotRect = dot.getBoundingClientRect();
+                    const dotCenterX = dotRect.left + dotRect.width / 2;
+                    const dotCenterY = dotRect.top + dotRect.height / 2;
+                    const distance = Math.sqrt(
+                        Math.pow(clientX - dotCenterX, 2) +
+                        Math.pow(clientY - dotCenterY, 2)
+                    );
+
+                    if (distance < 35) {
+                        setPatternInput(prev => [...prev, idx]);
+                        window.SoundSystem.buttonClick();
+                    }
+                });
+            };
+
+            const handlePatternEnd = () => {
+                if (!isDrawingPattern) return;
+
+                setIsDrawingPattern(false);
+                setCurrentPoint(null);
+
+                if (patternInput.length < 4) {
+                    // Pattern too short
+                    setPatternInput([]);
+                    return;
+                }
+
+                if (showPasswordSetup) {
+                    // Setting up new password
+                    setParentPassword([...patternInput]);
+                    setPasswordSuccess(true);
+                    window.SoundSystem.taskComplete();
+
+                    setTimeout(() => {
                         setShowPasswordSetup(false);
-                        setPasswordInput([]);
-                        window.SoundSystem.taskComplete();
-                        // Execute pending action
+                        setPatternInput([]);
+                        setPasswordSuccess(false);
                         if (pendingPasswordAction) {
                             pendingPasswordAction();
                             setPendingPasswordAction(null);
                         }
-                    } else {
-                        // Verifying password
-                        if (verifyPassword(newInput)) {
+                    }, 600);
+                } else {
+                    // Verifying password
+                    if (verifyPattern(patternInput)) {
+                        setPasswordSuccess(true);
+                        window.SoundSystem.taskComplete();
+
+                        setTimeout(() => {
                             setShowPasswordEntry(false);
-                            setPasswordInput([]);
-                            window.SoundSystem.taskComplete();
+                            setPatternInput([]);
+                            setPasswordSuccess(false);
                             if (pendingPasswordAction) {
                                 pendingPasswordAction();
                                 setPendingPasswordAction(null);
                             }
-                        } else {
-                            setPasswordError(true);
-                            setPasswordInput([]);
-                            window.SoundSystem.defeat();
-                        }
+                        }, 600);
+                    } else {
+                        setPasswordError(true);
+                        window.SoundSystem.defeat();
+
+                        setTimeout(() => {
+                            setPatternInput([]);
+                            setPasswordError(false);
+                        }, 800);
                     }
                 }
             };
 
-            const clearPasswordInput = () => {
-                setPasswordInput([]);
+            const clearPatternInput = () => {
+                setPatternInput([]);
                 setPasswordError(false);
+                setPasswordSuccess(false);
             };
 
             const requestParentAccess = (action) => {
                 setPendingPasswordAction(() => action);
+                setPatternInput([]);
+                setPasswordError(false);
+                setPasswordSuccess(false);
                 if (!parentPassword) {
                     setShowPasswordSetup(true);
                 } else {
@@ -2685,42 +2833,57 @@
 
                     {/* Password Setup Modal */}
                     {showPasswordSetup && (
-                        <div className="modal-overlay" onClick={() => { setShowPasswordSetup(false); setPendingPasswordAction(null); }}>
+                        <div className="modal-overlay" onClick={() => { setShowPasswordSetup(false); setPendingPasswordAction(null); clearPatternInput(); }}>
                             <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                <h2 className="text-2xl font-bold text-purple-600 text-center mb-4">🔐 Create Parent Password</h2>
+                                <h2 className="text-2xl font-bold text-purple-600 text-center mb-2">🔐 Create Parent Pattern</h2>
                                 <p className="text-gray-600 text-center mb-4">
-                                    Tap 4 emojis to create your secret parent password!
+                                    Draw a pattern connecting at least 4 dots
                                 </p>
 
-                                <div className="password-input-display">
-                                    {[0, 1, 2, 3].map(idx => (
-                                        <div key={idx} className={`password-slot ${passwordInput[idx] ? 'filled' : ''}`}>
-                                            {passwordInput[idx] || ''}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="fun-password-display">
-                                    {FUN_PASSWORD_EMOJIS.map(emoji => (
-                                        <span
-                                            key={emoji}
-                                            className="password-emoji"
-                                            onClick={() => handlePasswordInput(emoji)}
-                                        >
-                                            {emoji}
-                                        </span>
-                                    ))}
+                                <div
+                                    className="pattern-lock-container"
+                                    ref={patternGridRef}
+                                    onMouseMove={handlePatternMove}
+                                    onMouseUp={handlePatternEnd}
+                                    onMouseLeave={handlePatternEnd}
+                                    onTouchMove={handlePatternMove}
+                                    onTouchEnd={handlePatternEnd}
+                                >
+                                    <div className="pattern-grid">
+                                        <svg className="pattern-svg">
+                                            <path
+                                                className={`pattern-line ${passwordSuccess ? 'success' : ''}`}
+                                                d={getPatternPath(patternInput, isDrawingPattern ? currentPoint : null)}
+                                            />
+                                        </svg>
+                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
+                                            <div
+                                                key={idx}
+                                                ref={el => dotRefs.current[idx] = el}
+                                                className={`pattern-dot ${patternInput.includes(idx) ? 'selected' : ''} ${passwordSuccess ? 'success' : ''}`}
+                                                onMouseDown={(e) => handlePatternStart(idx, e)}
+                                                onTouchStart={(e) => handlePatternStart(idx, e)}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="pattern-hint">
+                                        {patternInput.length > 0 ? (
+                                            <span className="pattern-dots-count">{patternInput.length} dots selected</span>
+                                        ) : (
+                                            'Touch a dot to start'
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-3 mt-4">
                                     <button
-                                        onClick={clearPasswordInput}
+                                        onClick={clearPatternInput}
                                         className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
                                     >
                                         Clear
                                     </button>
                                     <button
-                                        onClick={() => { setShowPasswordSetup(false); setPendingPasswordAction(null); }}
+                                        onClick={() => { setShowPasswordSetup(false); setPendingPasswordAction(null); clearPatternInput(); }}
                                         className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
                                     >
                                         Cancel
@@ -2732,48 +2895,63 @@
 
                     {/* Password Entry Modal */}
                     {showPasswordEntry && (
-                        <div className="modal-overlay" onClick={() => { setShowPasswordEntry(false); setPendingPasswordAction(null); }}>
+                        <div className="modal-overlay" onClick={() => { setShowPasswordEntry(false); setPendingPasswordAction(null); clearPatternInput(); }}>
                             <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                <h2 className="text-2xl font-bold text-purple-600 text-center mb-4">🔐 Enter Parent Password</h2>
+                                <h2 className="text-2xl font-bold text-purple-600 text-center mb-2">🔐 Enter Parent Pattern</h2>
                                 <p className="text-gray-600 text-center mb-4">
-                                    Parents: Enter your emoji password
+                                    Draw your secret pattern to continue
                                 </p>
 
                                 {passwordError && (
                                     <div className="bg-red-100 text-red-600 p-3 rounded-xl text-center mb-4 font-semibold">
-                                        ❌ Wrong password! Try again.
+                                        ❌ Wrong pattern! Try again.
                                     </div>
                                 )}
 
-                                <div className="password-input-display">
-                                    {[0, 1, 2, 3].map(idx => (
-                                        <div key={idx} className={`password-slot ${passwordInput[idx] ? 'filled' : ''}`}>
-                                            {passwordInput[idx] || ''}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="fun-password-display">
-                                    {FUN_PASSWORD_EMOJIS.map(emoji => (
-                                        <span
-                                            key={emoji}
-                                            className="password-emoji"
-                                            onClick={() => handlePasswordInput(emoji)}
-                                        >
-                                            {emoji}
-                                        </span>
-                                    ))}
+                                <div
+                                    className="pattern-lock-container"
+                                    ref={patternGridRef}
+                                    onMouseMove={handlePatternMove}
+                                    onMouseUp={handlePatternEnd}
+                                    onMouseLeave={handlePatternEnd}
+                                    onTouchMove={handlePatternMove}
+                                    onTouchEnd={handlePatternEnd}
+                                >
+                                    <div className="pattern-grid">
+                                        <svg className="pattern-svg">
+                                            <path
+                                                className={`pattern-line ${passwordError ? 'error' : ''} ${passwordSuccess ? 'success' : ''}`}
+                                                d={getPatternPath(patternInput, isDrawingPattern ? currentPoint : null)}
+                                            />
+                                        </svg>
+                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
+                                            <div
+                                                key={idx}
+                                                ref={el => dotRefs.current[idx] = el}
+                                                className={`pattern-dot ${patternInput.includes(idx) ? 'selected' : ''} ${passwordError ? 'error' : ''} ${passwordSuccess ? 'success' : ''}`}
+                                                onMouseDown={(e) => handlePatternStart(idx, e)}
+                                                onTouchStart={(e) => handlePatternStart(idx, e)}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="pattern-hint">
+                                        {patternInput.length > 0 ? (
+                                            <span className="pattern-dots-count">{patternInput.length} dots</span>
+                                        ) : (
+                                            'Touch a dot to start'
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-3 mt-4">
                                     <button
-                                        onClick={clearPasswordInput}
+                                        onClick={clearPatternInput}
                                         className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
                                     >
                                         Clear
                                     </button>
                                     <button
-                                        onClick={() => { setShowPasswordEntry(false); setPendingPasswordAction(null); }}
+                                        onClick={() => { setShowPasswordEntry(false); setPendingPasswordAction(null); clearPatternInput(); }}
                                         className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
                                     >
                                         Cancel
@@ -2896,7 +3074,7 @@
                                         }}
                                         className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl font-semibold hover:bg-gray-200"
                                     >
-                                        🔄 Reset Parent Password
+                                        🔄 Reset Parent Pattern
                                     </button>
                                 </div>
                             </div>
