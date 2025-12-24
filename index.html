@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chore Quest - Earn Gems & Battle! ðŸ’Žâš“</title>
+    <title>Chore Quest - Earn Gems & Battle! 💎⚔️</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -697,7 +697,7 @@
             masterGain.connect(audioContext.destination);
             isUnlocked = true;
             
-            console.log('ðŸ”Š Sound system initialized!');
+            console.log('🔊 Sound system initialized!');
         };
         
         // Unlock audio on mobile (call from first user interaction)
@@ -1047,65 +1047,65 @@
         // ============ GAME DATA ============
         
         const SHIP_PROGRESSION = [
-            { id: 'starter', name: "Rusty Raft", cost: 0, size: "tiny", emoji: "ðŸš£", description: "A humble beginning" },
-            { id: 'sloop', name: "Swift Sloop", cost: 50, size: "small", emoji: "â›µ", description: "Quick and nimble" },
-            { id: 'brigantine', name: "Battle Brigantine", cost: 150, size: "medium", emoji: "ðŸš¢", description: "Ready for action" },
-            { id: 'galleon', name: "War Galleon", cost: 400, size: "large", emoji: "âš“", description: "A force to reckon with" },
-            { id: 'frigate', name: "Doom Frigate", cost: 800, size: "huge", emoji: "ðŸ´â€â˜ ï¸", description: "Terror of the seas" },
-            { id: 'kraken', name: "Legendary Kraken", cost: 1500, size: "massive", emoji: "ðŸ¦‘", description: "Mythical destroyer" },
-            { id: 'destroyer', name: "Ultimate Destroyer", cost: 3000, size: "legendary", emoji: "ðŸ‘‘", description: "The pinnacle of power" }
+            { id: 'starter', name: "Rusty Raft", cost: 0, size: "tiny", emoji: "🚣", description: "A humble beginning" },
+            { id: 'sloop', name: "Swift Sloop", cost: 50, size: "small", emoji: "⛵", description: "Quick and nimble" },
+            { id: 'brigantine', name: "Battle Brigantine", cost: 150, size: "medium", emoji: "🚢", description: "Ready for action" },
+            { id: 'galleon', name: "War Galleon", cost: 400, size: "large", emoji: "⚔️", description: "A force to reckon with" },
+            { id: 'frigate', name: "Doom Frigate", cost: 800, size: "huge", emoji: "🏴‍☠️", description: "Terror of the seas" },
+            { id: 'kraken', name: "Legendary Kraken", cost: 1500, size: "massive", emoji: "🦑", description: "Mythical destroyer" },
+            { id: 'destroyer', name: "Ultimate Destroyer", cost: 3000, size: "legendary", emoji: "👑", description: "The pinnacle of power" }
         ];
 
         const LOOT_TABLES = {
             hull: {
                 common: [
-                    { name: "Iron Nails", power: 5, emoji: "ðŸ”©" },
-                    { name: "Wooden Planks", power: 3, emoji: "ðŸªµ" },
-                    { name: "Tar Coating", power: 4, emoji: "ðŸ›¢ï¸" }
+                    { name: "Iron Nails", power: 5, emoji: "🔩" },
+                    { name: "Wooden Planks", power: 3, emoji: "🪵" },
+                    { name: "Tar Coating", power: 4, emoji: "🛢️" }
                 ],
                 rare: [
-                    { name: "Steel Plating", power: 15, emoji: "ðŸ›¡ï¸" },
-                    { name: "Reinforced Beams", power: 12, emoji: "âš™ï¸" },
-                    { name: "Copper Lining", power: 10, emoji: "ðŸ¥‰" }
+                    { name: "Steel Plating", power: 15, emoji: "🛡️" },
+                    { name: "Reinforced Beams", power: 12, emoji: "âš™️" },
+                    { name: "Copper Lining", power: 10, emoji: "🥉" }
                 ],
                 legendary: [
-                    { name: "Mythril Hull", power: 30, emoji: "ðŸ’Ž" },
-                    { name: "Dragon Scale Armor", power: 35, emoji: "ðŸ‰" },
-                    { name: "Enchanted Timber", power: 28, emoji: "âœ¨" }
+                    { name: "Mythril Hull", power: 30, emoji: "💎" },
+                    { name: "Dragon Scale Armor", power: 35, emoji: "🐉" },
+                    { name: "Enchanted Timber", power: 28, emoji: "✨" }
                 ]
             },
             sails: {
                 common: [
-                    { name: "Canvas Scraps", power: 3, emoji: "ðŸ§µ" },
-                    { name: "Cotton Sails", power: 4, emoji: "ðŸ³ï¸" },
-                    { name: "Hemp Rigging", power: 5, emoji: "ðŸª¢" }
+                    { name: "Canvas Scraps", power: 3, emoji: "🧵" },
+                    { name: "Cotton Sails", power: 4, emoji: "🏳️" },
+                    { name: "Hemp Rigging", power: 5, emoji: "🪢" }
                 ],
                 rare: [
-                    { name: "Silk Sails", power: 10, emoji: "ðŸŽ€" },
-                    { name: "Spider Silk Weave", power: 12, emoji: "ðŸ•¸ï¸" },
-                    { name: "Storm Sails", power: 14, emoji: "â›ˆï¸" }
+                    { name: "Silk Sails", power: 10, emoji: "🎀" },
+                    { name: "Spider Silk Weave", power: 12, emoji: "🕸️" },
+                    { name: "Storm Sails", power: 14, emoji: "⛈️" }
                 ],
                 legendary: [
-                    { name: "Wind Spirit Sails", power: 25, emoji: "ðŸŒ¬ï¸" },
-                    { name: "Phoenix Feather Sails", power: 30, emoji: "ðŸ”¥" },
-                    { name: "Void Sails", power: 28, emoji: "ðŸŒŒ" }
+                    { name: "Wind Spirit Sails", power: 25, emoji: "🌬️" },
+                    { name: "Phoenix Feather Sails", power: 30, emoji: "🔥" },
+                    { name: "Void Sails", power: 28, emoji: "🌌" }
                 ]
             },
             cannons: {
                 common: [
-                    { name: "Gunpowder", power: 2, emoji: "ðŸ’¥" },
+                    { name: "Gunpowder", power: 2, emoji: "💥" },
                     { name: "Iron Cannonballs", power: 3, emoji: "âš«" },
-                    { name: "Basic Fuses", power: 4, emoji: "ðŸ§¨" }
+                    { name: "Basic Fuses", power: 4, emoji: "🧨" }
                 ],
                 rare: [
-                    { name: "Explosive Rounds", power: 8, emoji: "ðŸ’£" },
-                    { name: "Chain Shot", power: 10, emoji: "â›“ï¸" },
-                    { name: "Grape Shot", power: 9, emoji: "ðŸ‡" }
+                    { name: "Explosive Rounds", power: 8, emoji: "💣" },
+                    { name: "Chain Shot", power: 10, emoji: "⛓️" },
+                    { name: "Grape Shot", power: 9, emoji: "🍇" }
                 ],
                 legendary: [
-                    { name: "Dragon Cannons", power: 20, emoji: "ðŸ²" },
-                    { name: "Thunder Barrels", power: 22, emoji: "âš¡" },
-                    { name: "Kraken Ink Bombs", power: 25, emoji: "ðŸ¦‘" }
+                    { name: "Dragon Cannons", power: 20, emoji: "🐲" },
+                    { name: "Thunder Barrels", power: 22, emoji: "⚡" },
+                    { name: "Kraken Ink Bombs", power: 25, emoji: "🦑" }
                 ]
             }
         };
@@ -1115,52 +1115,52 @@
             10: {
                 name: "Ghost Captain Morgan",
                 healthMultiplier: 3,
-                emoji: "ðŸ‘»",
-                figurehead: { id: 'golden_mermaid', name: "Golden Mermaid", emoji: "ðŸ§œâ€â™€ï¸", description: "Lucky Treasure Finder" }
+                emoji: "💻",
+                figurehead: { id: 'golden_mermaid', name: "Golden Mermaid", emoji: "🧜‍♀️", description: "Lucky Treasure Finder" }
             },
             20: {
                 name: "The Kraken Mother",
                 healthMultiplier: 3.5,
-                emoji: "ðŸ¦‘",
-                figurehead: { id: 'dragon_skull', name: "Dragon Skull", emoji: "ðŸ‰", description: "Fear the Dragon" }
+                emoji: "🦑",
+                figurehead: { id: 'dragon_skull', name: "Dragon Skull", emoji: "🐉", description: "Fear the Dragon" }
             },
             30: {
                 name: "Admiral Blackbeard's Ghost",
                 healthMultiplier: 4,
-                emoji: "ðŸ’€",
-                figurehead: { id: 'phoenix', name: "Phoenix Rising", emoji: "ðŸ”¥", description: "Never Surrender" }
+                emoji: "💀",
+                figurehead: { id: 'phoenix', name: "Phoenix Rising", emoji: "🔥", description: "Never Surrender" }
             },
             40: {
                 name: "The Sea Serpent King",
                 healthMultiplier: 4.5,
-                emoji: "ðŸ",
-                figurehead: { id: 'serpent', name: "Serpent Crown", emoji: "ðŸ", description: "Ruler of the Deep" }
+                emoji: "🐍",
+                figurehead: { id: 'serpent', name: "Serpent Crown", emoji: "🐍", description: "Ruler of the Deep" }
             },
             50: {
                 name: "The Dread Pizza",
                 healthMultiplier: 5,
-                emoji: "ðŸ•",
-                figurehead: { id: 'pizza', name: "Pizza Slice", emoji: "ðŸ•", description: "Deliciously Dangerous" }
+                emoji: "🍕",
+                figurehead: { id: 'pizza', name: "Pizza Slice", emoji: "🍕", description: "Deliciously Dangerous" }
             }
         };
 
         const INITIAL_TASKS = [
-            { id: 1, name: 'Do the dishes', icon: 'ðŸ½ï¸', completed: false, points: 5 },
-            { id: 2, name: 'Clean your room', icon: 'ðŸ›ï¸', completed: false, points: 10 },
-            { id: 3, name: 'Take care of the cat', icon: 'ðŸ±', completed: false, points: 5 },
-            { id: 4, name: 'Practice music', icon: 'ðŸŽ¸', completed: false, points: 8 }
+            { id: 1, name: 'Do the dishes', icon: '🍽️', completed: false, points: 5 },
+            { id: 2, name: 'Clean your room', icon: '🛏️', completed: false, points: 10 },
+            { id: 3, name: 'Take care of the cat', icon: '🐱', completed: false, points: 5 },
+            { id: 4, name: 'Practice music', icon: '🎸', completed: false, points: 8 }
         ];
 
         const STORE_ITEMS = [
-            { id: 'cool', name: 'Cool Skin', type: 'skin', price: 15, emoji: 'ðŸ˜Ž' },
-            { id: 'happy', name: 'Happy Skin', type: 'skin', price: 15, emoji: 'ðŸ˜Š' },
-            { id: 'star', name: 'Star Skin', type: 'skin', price: 20, emoji: 'â­' },
-            { id: 'superhero', name: 'Superhero Outfit', type: 'outfit', price: 25, emoji: 'ðŸ¦¸' },
-            { id: 'wizard', name: 'Wizard Outfit', type: 'outfit', price: 25, emoji: 'ðŸ§™' },
-            { id: 'ninja', name: 'Ninja Outfit', type: 'outfit', price: 30, emoji: 'ðŸ¥·' },
-            { id: 'crown', name: 'Royal Crown', type: 'accessory', price: 20, emoji: 'ðŸ‘‘' },
-            { id: 'sunglasses', name: 'Cool Sunglasses', type: 'accessory', price: 15, emoji: 'ðŸ•¶ï¸' },
-            { id: 'hat', name: 'Party Hat', type: 'accessory', price: 12, emoji: 'ðŸŽ©' }
+            { id: 'cool', name: 'Cool Skin', type: 'skin', price: 15, emoji: '😎' },
+            { id: 'happy', name: 'Happy Skin', type: 'skin', price: 15, emoji: '😊' },
+            { id: 'star', name: 'Star Skin', type: 'skin', price: 20, emoji: '⭐' },
+            { id: 'superhero', name: 'Superhero Outfit', type: 'outfit', price: 25, emoji: '🦸' },
+            { id: 'wizard', name: 'Wizard Outfit', type: 'outfit', price: 25, emoji: '🧙' },
+            { id: 'ninja', name: 'Ninja Outfit', type: 'outfit', price: 30, emoji: '🥷' },
+            { id: 'crown', name: 'Royal Crown', type: 'accessory', price: 20, emoji: '👑' },
+            { id: 'sunglasses', name: 'Cool Sunglasses', type: 'accessory', price: 15, emoji: '🕶️' },
+            { id: 'hat', name: 'Party Hat', type: 'accessory', price: 12, emoji: '🎩' }
         ];
 
         // ============ UTILITY FUNCTIONS ============
@@ -1427,13 +1427,13 @@
                                 // Enemy repairs
                                 const healAmount = Math.min(10 + Math.floor(prev.level / 2) * 5, prev.enemy.maxHealth - prev.enemy.health);
                                 newEnemyHealth = prev.enemy.health + healAmount;
-                                newCombatLog = [`ðŸ"§ Enemy repairs! <span class="log-heal">+${healAmount}</span> HP!`, ...newCombatLog].slice(0, 10);
+                                newCombatLog = [`📝§ Enemy repairs! <span class="log-heal">+${healAmount}</span> HP!`, ...newCombatLog].slice(0, 10);
                                 window.SoundSystem.shipRepair();
                             } else {
                                 // Enemy attacks
                                 const damage = prev.enemy.damage + Math.random() * 3;
                                 newPlayerHealth = Math.max(0, prev.player.health - damage);
-                                newCombatLog = [`ðŸ'¥ Enemy fires! <span class="log-damage">-${Math.floor(damage)}</span> damage!`, ...newCombatLog].slice(0, 10);
+                                newCombatLog = [`🐍'¥ Enemy fires! <span class="log-damage">-${Math.floor(damage)}</span> damage!`, ...newCombatLog].slice(0, 10);
                                 window.SoundSystem.cannonFire();
                                 setTimeout(() => window.SoundSystem.shipHit(), 200);
 
@@ -1961,7 +1961,7 @@
                             fireCooldown: isBoss ? 4.0 : Math.max(3.5 - level * 0.03, 2.5),
                             repairThreshold: 0.4
                         },
-                        combatLog: [isBoss ? `âš ï¸ BOSS BATTLE: ${bossData.name} approaches!` : 'âš“ Battle begins! Prepare for combat!']
+                        combatLog: [isBoss ? `âš ️ BOSS BATTLE: ${bossData.name} approaches!` : '⚔️ Battle begins! Prepare for combat!']
                     }));
                 }
             };
@@ -1983,7 +1983,7 @@
                     const damage = gameState.player.damage + Math.random() * 10;
                     showDamageNumber('enemy', damage);
                     window.SoundSystem.shipHit();
-                    addLog(`âš”ï¸ You fire your cannons! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
+                    addLog(`âš”️ You fire your cannons! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
                     
                     setGameState(prev => {
                         const newHealth = prev.enemy.health - damage;
@@ -2029,7 +2029,7 @@
                 }));
 
                 showDamageNumber('player', healAmount, true);
-                addLog(`ðŸ"§ Repaired! <span class="log-heal">+${healAmount}</span> HP!`);
+                addLog(`📝§ Repaired! <span class="log-heal">+${healAmount}</span> HP!`);
             };
 
             const handleVictory = () => {
@@ -2125,20 +2125,20 @@
             
             const GemIcon = ({ size = "w-8 h-8" }) => (
                 <div className={`${size} relative inline-flex items-center justify-center`}>
-                    <span className="text-2xl">ðŸ’Ž</span>
+                    <span className="text-2xl">💎</span>
                 </div>
             );
 
             const LootIcon = ({ size = "w-8 h-8" }) => (
                 <div className={`${size} relative inline-flex items-center justify-center`}>
-                    <span className="text-2xl">ðŸª™</span>
+                    <span className="text-2xl">🪙</span>
                 </div>
             );
             
             const Avatar = () => {
                 const getSkinEmoji = () => {
-                    const skins = { default: 'ðŸ˜Š', cool: 'ðŸ˜Ž', happy: 'ðŸ˜„', star: 'â­' };
-                    return skins[avatar.skin] || 'ðŸ˜Š';
+                    const skins = { default: '😊', cool: '😎', happy: '😄', star: '⭐' };
+                    return skins[avatar.skin] || '😊';
                 };
                 
                 const getOutfitColor = () => {
@@ -2147,7 +2147,7 @@
                 };
                 
                 const getAccessoryEmoji = () => {
-                    const accessories = { none: '', crown: 'ðŸ‘‘', sunglasses: 'ðŸ•¶ï¸', hat: 'ðŸŽ©' };
+                    const accessories = { none: '', crown: '👑', sunglasses: '🕶️', hat: '🎩' };
                     return accessories[avatar.accessory] || '';
                 };
                 
@@ -2184,7 +2184,7 @@
                         <g className="flag">
                             <line x1="115" y1="20" x2="115" y2="5" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="2"/>
                             <path d="M115 5 L140 8 Q138 12 140 16 L115 13 Z" fill={isPlayer ? "#1a1a1a" : "#8b0000"}/>
-                            <text x="120" y="14" fontSize="8" fill="#fff" fontWeight="bold">â˜ </text>
+                            <text x="120" y="14" fontSize="8" fill="#fff" fontWeight="bold">☠</text>
                         </g>
                         <line x1="45" y1="90" x2="255" y2="90" stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="3"/>
                         <circle cx="200" cy="110" r="7" fill={isPlayer ? "#ffd700" : "#ff4500"} opacity="0.8" stroke={isPlayer ? "#8b7355" : "#8b0000"} strokeWidth="1.5"/>
@@ -2206,7 +2206,7 @@
                         className={`sound-toggle ${!soundEnabled ? 'muted' : ''}`}
                         title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
                     >
-                        {soundEnabled ? 'ðŸ”Š' : 'ðŸ”‡'}
+                        {soundEnabled ? '🔊' : '🔇'}
                     </button>
 
                     {currentView === 'pirate' && (
@@ -2221,11 +2221,11 @@
                         {/* Header */}
                         <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6">
                             <div className="flex justify-between items-center flex-wrap gap-4">
-                                <h1 className="text-4xl font-bold text-purple-600">ðŸŒŸ Chore Quest</h1>
+                                <h1 className="text-4xl font-bold text-purple-600">🌟 Chore Quest</h1>
                                 <div className="flex items-center gap-4">
                                     {streak > 0 && (
                                         <div className="flex items-center gap-1 bg-orange-100 px-3 py-2 rounded-full">
-                                            <span className="text-2xl streak-fire">ðŸ”¥</span>
+                                            <span className="text-2xl streak-fire">🔥</span>
                                             <span className="text-xl font-bold text-orange-600">{streak}</span>
                                         </div>
                                     )}
@@ -2254,11 +2254,11 @@
                                             : 'bg-white text-gray-600 hover:bg-pink-100'
                                     }`}
                                 >
-                                    {view === 'tasks' && 'ðŸ“'}
-                                    {view === 'avatar' && 'ðŸ‘¤'}
-                                    {view === 'store' && 'ðŸª'}
-                                    {view === 'pirate' && 'âš“'}
-                                    {view === 'collection' && 'ðŸŽ’'}
+                                    {view === 'tasks' && '📝'}
+                                    {view === 'avatar' && '👤'}
+                                    {view === 'store' && '🏪'}
+                                    {view === 'pirate' && '⚔️'}
+                                    {view === 'collection' && '🎒'}
                                     <span className="ml-1 capitalize">{view}</span>
                                 </button>
                             ))}
@@ -2372,7 +2372,7 @@
                         {/* Store View */}
                         {currentView === 'store' && (
                             <div className="bg-white rounded-3xl shadow-2xl p-8">
-                                <h2 className="text-3xl font-bold text-purple-600 mb-6">ðŸ’Ž Gem Store</h2>
+                                <h2 className="text-3xl font-bold text-purple-600 mb-6">💎 Gem Store</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {STORE_ITEMS.map(item => {
                                         const owned = inventory.includes(item.id);
@@ -2401,7 +2401,7 @@
                                                     </div>
                                                     {owned ? <span className="text-4xl">âœ“</span>
                                                     : canAfford ? <button className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600">Buy</button>
-                                                    : <span className="text-2xl">ðŸ”’</span>}
+                                                    : <span className="text-2xl">🔒</span>}
                                                 </div>
                                             </div>
                                         );
@@ -2415,7 +2415,7 @@
                             <div className="space-y-6">
                                 {/* Ships */}
                                 <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-3xl p-6 border-4 border-blue-500">
-                                    <h2 className="text-3xl font-bold text-white mb-6">ðŸš¢ Ships</h2>
+                                    <h2 className="text-3xl font-bold text-white mb-6">🚢 Ships</h2>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {SHIP_PROGRESSION.map(ship => {
                                             const owned = ownedShips.includes(ship.id);
@@ -2433,11 +2433,11 @@
                                                         : 'bg-gray-800 opacity-50'
                                                     }`}
                                                 >
-                                                    <div className="text-4xl mb-2">{owned ? ship.emoji : 'â“'}</div>
+                                                    <div className="text-4xl mb-2">{owned ? ship.emoji : '❔'}</div>
                                                     <div className="text-white font-bold text-sm">{ship.name}</div>
                                                     {!owned && (
                                                         <div className="flex items-center justify-center gap-1 mt-2">
-                                                            <span className="text-lg">ðŸ’Ž</span>
+                                                            <span className="text-lg">💎</span>
                                                             <span className="text-yellow-300 font-bold">{ship.cost}</span>
                                                         </div>
                                                     )}
@@ -2448,7 +2448,7 @@
                                     </div>
                                     {nextShip && (
                                         <div className="mt-4">
-                                            <div className="text-white text-sm mb-2">Progress to {nextShip.name}: {gems}/{nextShip.cost} ðŸ’Ž</div>
+                                            <div className="text-white text-sm mb-2">Progress to {nextShip.name}: {gems}/{nextShip.cost} 💎</div>
                                             <div className="progress-bar-container">
                                                 <div className="progress-bar-fill" style={{width: `${Math.min(progressToNext, 100)}%`}}></div>
                                             </div>
@@ -2458,7 +2458,7 @@
 
                                 {/* Figureheads */}
                                 <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-3xl p-6 border-4 border-purple-500">
-                                    <h2 className="text-3xl font-bold text-white mb-6">ðŸ† Figureheads (Boss Trophies)</h2>
+                                    <h2 className="text-3xl font-bold text-white mb-6">🏆 Figureheads (Boss Trophies)</h2>
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                         {Object.values(BOSS_BATTLES).map(boss => {
                                             const owned = figureheads.find(f => f.id === boss.figurehead.id);
@@ -2474,7 +2474,7 @@
                                                         : 'bg-gray-800 opacity-50'
                                                     }`}
                                                 >
-                                                    <div className="text-4xl mb-2">{owned ? boss.figurehead.emoji : 'â“'}</div>
+                                                    <div className="text-4xl mb-2">{owned ? boss.figurehead.emoji : '❔'}</div>
                                                     <div className="text-white font-bold text-xs">{owned ? boss.figurehead.name : '???'}</div>
                                                     {isEquipped && <div className="text-xs mt-1 text-yellow-200">EQUIPPED</div>}
                                                 </div>
@@ -2485,8 +2485,8 @@
 
                                 {/* Equipment */}
                                 <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 border-4 border-gray-600">
-                                    <h2 className="text-3xl font-bold text-white mb-4">âš”ï¸ Equipment</h2>
-                                    <div className="text-xl text-yellow-400 mb-4">Total Power: âš¡{getTotalPower()}</div>
+                                    <h2 className="text-3xl font-bold text-white mb-4">âš”️ Equipment</h2>
+                                    <div className="text-xl text-yellow-400 mb-4">Total Power: ⚡{getTotalPower()}</div>
                                     
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                         {['hull', 'sails', 'cannons', 'figurehead'].map(slot => (
@@ -2501,7 +2501,7 @@
                                                         )}
                                                     </>
                                                 ) : (
-                                                    <div className="text-gray-500 text-2xl">â€”</div>
+                                                    <div className="text-gray-500 text-2xl">—</div>
                                                 )}
                                             </div>
                                         ))}
@@ -2532,7 +2532,7 @@
 
                                     {loot >= 50 && (
                                         <div className="mt-4 p-4 bg-yellow-600 rounded-xl text-center">
-                                            <span className="text-white font-bold">ðŸ”§ Ship Upgrades Coming Soon! ({loot} loot saved)</span>
+                                            <span className="text-white font-bold">🔧 Ship Upgrades Coming Soon! ({loot} loot saved)</span>
                                         </div>
                                     )}
                                 </div>
@@ -2543,26 +2543,26 @@
                         {currentView === 'pirate' && (
                             <div>
                                 <h1 style={{fontFamily: 'Cinzel'}} className="text-5xl font-bold text-center mb-4 text-yellow-400">
-                                    âš“ PIRATE BATTLE âš“
+                                    ⚔️ PIRATE BATTLE ⚔️
                                 </h1>
                                 <div className="text-center text-xl mb-6 text-blue-200">
                                     Level {gameState.level}
                                     {gameState.level % 10 === 0 && BOSS_BATTLES[gameState.level] && (
-                                        <span className="ml-2 text-red-400">ðŸ”¥ BOSS LEVEL!</span>
+                                        <span className="ml-2 text-red-400">🔥 BOSS LEVEL!</span>
                                     )}
                                 </div>
 
                                 {!gameState.inBattle ? (
                                     <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-12 text-center">
-                                        <div className="text-6xl mb-4">{currentShipData?.emoji || 'ðŸš£'}</div>
+                                        <div className="text-6xl mb-4">{currentShipData?.emoji || '🚣'}</div>
                                         <div className="text-2xl text-white mb-4">{currentShipData?.name || 'Rusty Raft'}</div>
-                                        <div className="text-yellow-400 mb-6">âš¡ Power: {getTotalPower()}</div>
+                                        <div className="text-yellow-400 mb-6">⚡ Power: {getTotalPower()}</div>
                                         <button
                                             onClick={() => startBattle()}
                                             style={{fontFamily: 'Cinzel'}}
                                             className="px-12 py-6 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-2xl font-bold text-3xl hover:scale-105 transition-transform shadow-2xl"
                                         >
-                                            ðŸ´â€â˜ ï¸ START BATTLE ðŸ´â€â˜ ï¸
+                                            🏴‍☠️ START BATTLE 🏴‍☠️
                                         </button>
                                     </div>
                                 ) : (
@@ -2578,8 +2578,8 @@
                                                     <PirateShipSVG isPlayer={true} size={gameState.player.size} />
                                                 </div>
                                                 <div className="space-y-2 text-white">
-                                                    <div className="flex justify-between"><span>âš”ï¸ Cannons:</span><span className="font-bold text-yellow-400">{gameState.player.cannons}</span></div>
-                                                    <div className="flex justify-between"><span>ðŸ‘¥ Crew:</span><span className="font-bold text-yellow-400">{gameState.player.crew}</span></div>
+                                                    <div className="flex justify-between"><span>âš”️ Cannons:</span><span className="font-bold text-yellow-400">{gameState.player.cannons}</span></div>
+                                                    <div className="flex justify-between"><span>💥 Crew:</span><span className="font-bold text-yellow-400">{gameState.player.crew}</span></div>
                                                     <div className="health-bar mt-4">
                                                         <div className="health-fill" style={{width: `${(gameState.player.health / gameState.player.maxHealth) * 100}%`}}></div>
                                                         <div className="health-text">{Math.floor(gameState.player.health)} / {gameState.player.maxHealth}</div>
@@ -2603,8 +2603,8 @@
                                                     <PirateShipSVG isPlayer={false} size={gameState.enemy.size} />
                                                 </div>
                                                 <div className="space-y-2 text-white">
-                                                    <div className="flex justify-between"><span>âš”ï¸ Cannons:</span><span className="font-bold text-yellow-400">{gameState.enemy.cannons}</span></div>
-                                                    <div className="flex justify-between"><span>ðŸ‘¥ Crew:</span><span className="font-bold text-yellow-400">{gameState.enemy.crew}</span></div>
+                                                    <div className="flex justify-between"><span>âš”️ Cannons:</span><span className="font-bold text-yellow-400">{gameState.enemy.cannons}</span></div>
+                                                    <div className="flex justify-between"><span>💥 Crew:</span><span className="font-bold text-yellow-400">{gameState.enemy.crew}</span></div>
                                                     <div className="health-bar mt-4">
                                                         <div className="health-fill" style={{width: `${(gameState.enemy.health / gameState.enemy.maxHealth) * 100}%`}}></div>
                                                         <div className="health-text">{Math.floor(gameState.enemy.health)} / {Math.floor(gameState.enemy.maxHealth)}</div>
@@ -2647,7 +2647,7 @@
                                                     className="cooldown-overlay"
                                                     style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
                                                 ></div>
-                                                <span className="btn-label">ðŸ'£ FIRE!</span>
+                                                <span className="btn-label">🐍'£ FIRE!</span>
                                                 <span className="cooldown-text">
                                                     {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
                                                 </span>
@@ -2662,7 +2662,7 @@
                                                     className="cooldown-overlay"
                                                     style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
                                                 ></div>
-                                                <span className="btn-label">ðŸ"§ REPAIR</span>
+                                                <span className="btn-label">📝§ REPAIR</span>
                                                 <span className="cooldown-text">
                                                     {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
                                                 </span>
@@ -2690,7 +2690,7 @@
                                 <div className={`loot-card w-64 h-80 mx-auto mb-8 ${lootRevealed ? 'flipped' : ''}`}>
                                     <div className="loot-card-inner relative w-full h-full">
                                         <div className="loot-card-front bg-gradient-to-br from-gray-700 to-gray-900 rounded-2xl flex items-center justify-center border-4 border-yellow-500">
-                                            <span className="text-8xl">â“</span>
+                                            <span className="text-8xl">❔</span>
                                         </div>
                                         <div className={`loot-card-back rounded-2xl flex flex-col items-center justify-center p-6 border-4 ${
                                             currentLoot.rarity === 'legendary' ? 'bg-gradient-to-br from-purple-600 to-purple-900 border-purple-400 legendary-glow'
@@ -2713,10 +2713,10 @@
                                 {lootRevealed && (
                                     <div className="space-y-4">
                                         {currentLoot.gemReward > 0 && (
-                                            <div className="text-2xl text-purple-300">+{currentLoot.gemReward} ðŸ’Ž Gems!</div>
+                                            <div className="text-2xl text-purple-300">+{currentLoot.gemReward} 💎 Gems!</div>
                                         )}
                                         {currentLoot.lootReward > 0 && (
-                                            <div className="text-2xl text-yellow-300">+{currentLoot.lootReward} ðŸª™ Loot!</div>
+                                            <div className="text-2xl text-yellow-300">+{currentLoot.lootReward} 🪙 Loot!</div>
                                         )}
                                         <button
                                             onClick={closeLootReveal}
@@ -2736,7 +2736,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-yellow-600 to-orange-600 rounded-3xl p-12 text-center max-w-lg border-8 border-yellow-400 shadow-2xl">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
-                                    ðŸ† VICTORY! ðŸ†
+                                    🏆 VICTORY! 🏆
                                 </h2>
                                 <p className="text-2xl text-white mb-8">Level {gameState.level} Complete!</p>
                                 <button
@@ -2744,7 +2744,7 @@
                                     style={{fontFamily: 'Cinzel'}}
                                     className="px-12 py-4 bg-white text-orange-600 rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
                                 >
-                                    NEXT LEVEL âš“
+                                    NEXT LEVEL ⚔️
                                 </button>
                             </div>
                         </div>
@@ -2755,7 +2755,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-red-900 to-black rounded-3xl p-12 text-center max-w-lg border-8 border-red-700 shadow-2xl">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-red-500 mb-4">
-                                    ðŸ’€ DEFEATED ðŸ’€
+                                    💀 DEFEATED 💀
                                 </h2>
                                 {gameState.isBoss ? (
                                     <>
@@ -2772,7 +2772,7 @@
                                     style={{fontFamily: 'Cinzel'}}
                                     className="px-12 py-4 bg-red-600 text-white rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
                                 >
-                                    {gameState.isBoss ? 'BACK TO TRAINING âš“' : 'TRY AGAIN âš“'}
+                                    {gameState.isBoss ? 'BACK TO TRAINING ⚔️' : 'TRY AGAIN ⚔️'}
                                 </button>
                             </div>
                         </div>
@@ -2784,7 +2784,7 @@
                             <div className="text-center boss-entrance">
                                 <div className="text-9xl mb-8 pulse-glow" style={{color: '#ff4444'}}>{gameState.bossData.emoji}</div>
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-5xl font-bold text-red-500 mb-4">
-                                    âš ï¸ BOSS BATTLE âš ï¸
+                                    âš ️ BOSS BATTLE âš ️
                                 </h2>
                                 <p className="text-3xl text-white">{gameState.bossData.name}</p>
                             </div>
@@ -2796,7 +2796,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-purple-800 to-pink-900 rounded-3xl p-12 text-center max-w-lg border-8 border-purple-400 shadow-2xl unlock-burst">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
-                                    ðŸ† FIGUREHEAD UNLOCKED! ðŸ†
+                                    🏆 FIGUREHEAD UNLOCKED! 🏆
                                 </h2>
                                 <div className="text-8xl mb-4">{unlockedFigurehead.emoji}</div>
                                 <p className="text-2xl text-purple-200 font-bold mb-2">{unlockedFigurehead.name}</p>
@@ -2816,7 +2816,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-blue-800 to-cyan-900 rounded-3xl p-12 text-center max-w-lg border-8 border-blue-400 shadow-2xl unlock-burst">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
-                                    ðŸš¢ NEW SHIP! ðŸš¢
+                                    🚢 NEW SHIP! 🚢
                                 </h2>
                                 <div className="text-8xl mb-4">{unlockedShip.emoji}</div>
                                 <p className="text-2xl text-blue-200 font-bold mb-2">{unlockedShip.name}</p>
