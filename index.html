@@ -37,7 +37,7 @@
         }
         
         .chore-view { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .pirate-view {
+        .battle-view {
             font-family: 'Crimson Pro', serif;
             background: linear-gradient(180deg, var(--ocean-deep) 0%, var(--ocean-mid) 50%, var(--ocean-light) 100%);
         }
@@ -814,6 +814,58 @@
         }
 
         .log-gold { color: var(--gold); font-weight: 600; }
+
+        /* Cooldown Progress Bar */
+        .cooldown-progress-container {
+            width: 100%;
+            height: 24px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid var(--gold-dark);
+            position: relative;
+        }
+
+        .cooldown-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--fire-orange), #f39c12);
+            transition: width 0.1s linear;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cooldown-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.3), transparent);
+        }
+
+        .cooldown-progress-bar.ready {
+            background: linear-gradient(90deg, var(--health-green), #27ae60);
+            animation: pulse-ready 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-ready {
+            from { opacity: 0.8; }
+            to { opacity: 1; }
+        }
+
+        .cooldown-progress-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
@@ -1287,10 +1339,10 @@
         };
 
         const INITIAL_TASKS = [
-            { id: 1, name: 'Do the dishes', icon: '🍽️', completed: false, points: 5 },
-            { id: 2, name: 'Clean your room', icon: '🛏️', completed: false, points: 10 },
-            { id: 3, name: 'Take care of the cat', icon: '🐱', completed: false, points: 5 },
-            { id: 4, name: 'Practice music', icon: '🎸', completed: false, points: 8 }
+            { id: 1, name: 'Do the dishes', icon: '🍽️', completed: false, points: 5, repeatType: 'daily' },
+            { id: 2, name: 'Clean your room', icon: '🛏️', completed: false, points: 10, repeatType: 'daily' },
+            { id: 3, name: 'Take care of the cat', icon: '🐱', completed: false, points: 5, repeatType: 'multiple' },
+            { id: 4, name: 'Practice music', icon: '🎸', completed: false, points: 8, repeatType: 'daily' }
         ];
 
         const STORE_ITEMS = [
@@ -1498,7 +1550,7 @@
 
             const [editingChore, setEditingChore] = useState(null);
             const [showChoreEditor, setShowChoreEditor] = useState(false);
-            const [choreForm, setChoreForm] = useState({ name: '', icon: '📋', points: 5, repeatable: true });
+            const [choreForm, setChoreForm] = useState({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
 
             const playerShipRef = useRef(null);
             const enemyShipRef = useRef(null);
@@ -1546,7 +1598,18 @@
             useEffect(() => {
                 const today = new Date().toDateString();
                 if (lastPlayDate && lastPlayDate !== today) {
-                    setTasks(tasks.map(task => ({ ...task, completed: false })));
+                    // Reset daily and multiple tasks, remove completed one-time tasks
+                    setTasks(tasks.filter(task => {
+                        // Remove completed one-time tasks
+                        if (task.repeatType === 'once' && task.completed) return false;
+                        return true;
+                    }).map(task => {
+                        // Reset daily and multiple tasks
+                        if (task.repeatType === 'daily' || task.repeatType === 'multiple') {
+                            return { ...task, completed: false };
+                        }
+                        return task;
+                    }));
                     const yesterday = new Date();
                     yesterday.setDate(yesterday.getDate() - 1);
                     if (lastPlayDate === yesterday.toDateString()) {
@@ -1691,24 +1754,29 @@
 
             const toggleTask = (id) => {
                 const task = tasks.find(t => t.id === id);
-                if (!task || task.completed) return;
+                // For 'multiple' type tasks, allow completion even if already completed today
+                if (!task || (task.completed && task.repeatType !== 'multiple')) return;
 
                 // Mark task as completed but add to pending approval
                 const streakBonus = Math.floor(streak / 5);
                 const totalPoints = task.points + streakBonus;
 
-                // Add to pending approval queue
+                // Add to pending approval queue with unique ID for this completion
                 setPendingApproval(prev => [...prev, {
                     ...task,
+                    approvalId: `${task.id}-${Date.now()}`,
                     totalPoints,
                     streakBonus,
                     completedAt: new Date().toISOString()
                 }]);
 
-                // Mark as completed in active list
-                setTasks(tasks.map(t =>
-                    t.id === id ? { ...t, completed: true, pendingApproval: true } : t
-                ));
+                // For 'multiple' type, don't mark as completed so it can be done again
+                // For 'once' and 'daily', mark as completed
+                if (task.repeatType !== 'multiple') {
+                    setTasks(tasks.map(t =>
+                        t.id === id ? { ...t, completed: true, pendingApproval: true } : t
+                    ));
+                }
 
                 window.SoundSystem.buttonClick();
             };
@@ -1887,14 +1955,14 @@
                     name: choreForm.name.trim(),
                     icon: choreForm.icon,
                     points: parseInt(choreForm.points) || 5,
-                    repeatable: choreForm.repeatable,
+                    repeatType: choreForm.repeatType,
                     completed: false
                 };
 
                 if (!newChore.name) return;
 
                 setTasks(prev => [...prev, newChore]);
-                setChoreForm({ name: '', icon: '📋', points: 5, repeatable: true });
+                setChoreForm({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
                 setShowChoreEditor(false);
                 window.SoundSystem.buttonClick();
             };
@@ -1908,13 +1976,13 @@
                         name: choreForm.name.trim() || task.name,
                         icon: choreForm.icon,
                         points: parseInt(choreForm.points) || task.points,
-                        repeatable: choreForm.repeatable
+                        repeatType: choreForm.repeatType
                     } : task
                 ));
 
                 setEditingChore(null);
                 setShowChoreEditor(false);
-                setChoreForm({ name: '', icon: '📋', points: 5, repeatable: true });
+                setChoreForm({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
                 window.SoundSystem.buttonClick();
             };
 
@@ -1950,11 +2018,11 @@
                         name: chore.name,
                         icon: chore.icon,
                         points: chore.points,
-                        repeatable: chore.repeatable !== false
+                        repeatType: chore.repeatType || 'daily'
                     });
                 } else {
                     setEditingChore(null);
-                    setChoreForm({ name: '', icon: '📋', points: 5, repeatable: true });
+                    setChoreForm({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
                 }
                 setShowChoreEditor(true);
             };
@@ -1966,8 +2034,10 @@
             const submitReviews = () => {
                 let gemsAwarded = 0;
 
+                // Use approvalId for unique identification (supports multiple completions)
                 pendingApproval.forEach(chore => {
-                    const decision = reviewDecisions[chore.id];
+                    const key = chore.approvalId || chore.id;
+                    const decision = reviewDecisions[key];
                     if (decision === 'pass') {
                         gemsAwarded += chore.totalPoints;
                     }
@@ -1981,11 +2051,21 @@
                     setTimeout(() => setCelebration(false), 500);
                 }
 
+                // Get all reviewed keys
+                const reviewedKeys = Object.keys(reviewDecisions);
+
                 // Update tasks - mark reviewed ones as no longer pending
-                const reviewedIds = Object.keys(reviewDecisions).map(id => parseInt(id));
+                // For 'multiple' type tasks, we don't mark as completed
+                const reviewedTaskIds = new Set(
+                    pendingApproval
+                        .filter(p => reviewedKeys.includes(p.approvalId || String(p.id)))
+                        .map(p => p.id)
+                );
+
                 setTasks(prev => prev.map(task => {
-                    if (reviewedIds.includes(task.id)) {
-                        const decision = reviewDecisions[task.id];
+                    if (reviewedTaskIds.has(task.id) && task.repeatType !== 'multiple') {
+                        const key = pendingApproval.find(p => p.id === task.id)?.approvalId || task.id;
+                        const decision = reviewDecisions[key];
                         if (decision === 'fail') {
                             // Failed - reset to incomplete so child can redo
                             return { ...task, completed: false, pendingApproval: false };
@@ -1996,8 +2076,11 @@
                     return task;
                 }));
 
-                // Remove reviewed items from pending approval
-                setPendingApproval(prev => prev.filter(p => !reviewedIds.includes(p.id)));
+                // Remove reviewed items from pending approval using approvalId
+                setPendingApproval(prev => prev.filter(p => {
+                    const key = p.approvalId || String(p.id);
+                    return !reviewedKeys.includes(key);
+                }));
 
                 setShowParentReview(false);
                 setReviewDecisions({});
@@ -2386,7 +2469,7 @@
             const progressToNext = nextShip ? (gems / nextShip.cost) * 100 : 100;
 
             return (
-                <div className={`min-h-screen p-4 ${currentView === 'pirate' ? 'pirate-view' : currentView === 'collection' ? 'collection-view' : 'chore-view'}`}>
+                <div className={`min-h-screen p-4 ${currentView === 'battle' ? 'battle-view' : currentView === 'collection' ? 'collection-view' : 'chore-view'}`}>
                     {/* Sound Toggle Button */}
                     <button 
                         onClick={toggleSound}
@@ -2396,7 +2479,7 @@
                         {soundEnabled ? '🔊' : '🔇'}
                     </button>
 
-                    {currentView === 'pirate' && (
+                    {currentView === 'battle' && (
                         <div className="ocean-waves">
                             <div className="wave"></div>
                             <div className="wave"></div>
@@ -2431,7 +2514,7 @@
                         
                         {/* Navigation */}
                         <div className="flex gap-2 mb-6 overflow-x-auto">
-                            {['tasks', 'avatar', 'store', 'pirate', 'collection'].map(view => (
+                            {['tasks', 'avatar', 'store', 'battle', 'collection'].map(view => (
                                 <button
                                     key={view}
                                     onClick={() => handleViewChange(view)}
@@ -2444,7 +2527,7 @@
                                     {view === 'tasks' && '📝'}
                                     {view === 'avatar' && '👤'}
                                     {view === 'store' && '🏪'}
-                                    {view === 'pirate' && '⚔️'}
+                                    {view === 'battle' && '⚔️'}
                                     {view === 'collection' && '🎒'}
                                     <span className="ml-1 capitalize">{view}</span>
                                 </button>
@@ -2465,45 +2548,57 @@
                                 </div>
 
                                 <div className="space-y-4">
-                                    {tasks.map(task => (
-                                        <div
-                                            key={task.id}
-                                            onClick={() => !task.completed && toggleTask(task.id)}
-                                            className={`p-6 rounded-2xl cursor-pointer transition-all ${
-                                                task.completed && task.pendingApproval
-                                                    ? 'bg-yellow-50 border-4 border-yellow-400'
-                                                    : task.completed
-                                                    ? 'bg-green-100 border-4 border-green-400'
-                                                    : 'bg-gradient-to-r from-purple-100 to-pink-100 border-4 border-purple-300 hover:scale-105 shine'
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-5xl">{task.icon}</span>
-                                                    <div>
-                                                        <h3 className="text-2xl font-bold text-gray-800">{task.name}</h3>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <GemIcon size="w-6 h-6" />
-                                                            <span className="text-lg font-semibold text-purple-700">
-                                                                +{task.points}{streak > 0 && <span className="text-orange-500"> +{Math.floor(streak/5)} streak</span>}
-                                                            </span>
-                                                            {task.pendingApproval && (
-                                                                <span className="approval-badge pending">⏳ Waiting for approval</span>
-                                                            )}
+                                    {tasks.map(task => {
+                                        const pendingCount = pendingApproval.filter(p => p.id === task.id).length;
+                                        const canClick = task.repeatType === 'multiple' || !task.completed;
+                                        return (
+                                            <div
+                                                key={task.id}
+                                                onClick={() => canClick && toggleTask(task.id)}
+                                                className={`p-6 rounded-2xl cursor-pointer transition-all ${
+                                                    task.completed && task.repeatType !== 'multiple'
+                                                        ? task.pendingApproval
+                                                            ? 'bg-yellow-50 border-4 border-yellow-400'
+                                                            : 'bg-green-100 border-4 border-green-400'
+                                                        : 'bg-gradient-to-r from-purple-100 to-pink-100 border-4 border-purple-300 hover:scale-105 shine'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-5xl">{task.icon}</span>
+                                                        <div>
+                                                            <h3 className="text-2xl font-bold text-gray-800">{task.name}</h3>
+                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                                <GemIcon size="w-6 h-6" />
+                                                                <span className="text-lg font-semibold text-purple-700">
+                                                                    +{task.points}{streak > 0 && <span className="text-orange-500"> +{Math.floor(streak/5)} streak</span>}
+                                                                </span>
+                                                                {task.repeatType === 'multiple' && (
+                                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">🔁 Multi</span>
+                                                                )}
+                                                                {task.repeatType === 'once' && (
+                                                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">🔲 Once</span>
+                                                                )}
+                                                                {pendingCount > 0 && (
+                                                                    <span className="approval-badge pending">⏳ {pendingCount} pending</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center ${
-                                                    task.completed && task.pendingApproval ? 'bg-yellow-400 border-yellow-500'
-                                                    : task.completed ? 'bg-green-500 border-green-600'
-                                                    : 'bg-white border-purple-300'
-                                                }`}>
-                                                    {task.completed && task.pendingApproval && <span className="text-2xl">⏳</span>}
-                                                    {task.completed && !task.pendingApproval && <span className="text-3xl text-white">✔</span>}
+                                                    <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center ${
+                                                        task.completed && task.repeatType !== 'multiple'
+                                                            ? task.pendingApproval ? 'bg-yellow-400 border-yellow-500' : 'bg-green-500 border-green-600'
+                                                            : pendingCount > 0 ? 'bg-yellow-400 border-yellow-500'
+                                                            : 'bg-white border-purple-300'
+                                                    }`}>
+                                                        {task.completed && task.repeatType !== 'multiple' && task.pendingApproval && <span className="text-2xl">⏳</span>}
+                                                        {task.completed && task.repeatType !== 'multiple' && !task.pendingApproval && <span className="text-3xl text-white">✔</span>}
+                                                        {task.repeatType === 'multiple' && pendingCount > 0 && <span className="text-lg font-bold">{pendingCount}</span>}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 {hasPendingChores && (
@@ -2515,7 +2610,7 @@
                                     </button>
                                 )}
 
-                                {tasks.every(task => task.completed && !task.pendingApproval) && tasks.length > 0 && (
+                                {tasks.filter(t => t.repeatType !== 'multiple').every(task => task.completed && !task.pendingApproval) && tasks.filter(t => t.repeatType !== 'multiple').length > 0 && pendingApproval.length === 0 && (
                                     <div className="mt-8 p-6 bg-gradient-to-r from-yellow-200 to-orange-200 rounded-2xl text-center">
                                         <p className="text-3xl font-bold text-orange-700">🎉 All chores complete! Amazing work! 🎉</p>
                                     </div>
@@ -2788,11 +2883,11 @@
                             </div>
                         )}
 
-                        {/* Pirate Battle View */}
-                        {currentView === 'pirate' && (
+                        {/* Battle View */}
+                        {currentView === 'battle' && (
                             <div>
                                 <h1 style={{fontFamily: 'Cinzel'}} className="text-5xl font-bold text-center mb-4 text-yellow-400">
-                                    ⚔️ PIRATE BATTLE ⚔️
+                                    ⚔️ BATTLE ⚔️
                                 </h1>
                                 <div className="text-center text-xl mb-6 text-blue-200">
                                     Level {gameState.level}
@@ -2884,6 +2979,19 @@
                                             </div>
                                         </div>
 
+                                        {/* Cooldown Progress Bar */}
+                                        <div className="mb-4 px-4">
+                                            <div className="cooldown-progress-container">
+                                                <div
+                                                    className={`cooldown-progress-bar ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
+                                                    style={{width: `${gameState.playerCooldown > 0 ? ((1 - gameState.playerCooldown / getPlayerCooldown()) * 100) : 100}%`}}
+                                                ></div>
+                                                <span className="cooldown-progress-label">
+                                                    {gameState.playerCooldown > 0 ? `⏳ ${gameState.playerCooldown.toFixed(1)}s` : '⚡ READY!'}
+                                                </span>
+                                            </div>
+                                        </div>
+
                                         {/* Combat Actions with Cooldowns */}
                                         <div className="flex gap-4 justify-center mb-6 flex-wrap">
                                             <button
@@ -2930,8 +3038,8 @@
                         )}
                     </div>
 
-                    {/* Loot Reveal Modal */}
-                    {showLootReveal && currentLoot && (
+                    {/* Loot Reveal Modal - Battle Tab Only */}
+                    {currentView === 'battle' && showLootReveal && currentLoot && (
                         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                             <div className="text-center">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-8">LOOT DROP!</h2>
@@ -2980,8 +3088,8 @@
                         </div>
                     )}
 
-                    {/* Victory Modal */}
-                    {showVictory && (
+                    {/* Victory Modal - Battle Tab Only */}
+                    {currentView === 'battle' && showVictory && (
                         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-yellow-600 to-orange-600 rounded-3xl p-12 text-center max-w-lg border-8 border-yellow-400 shadow-2xl">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
@@ -2999,8 +3107,8 @@
                         </div>
                     )}
 
-                    {/* Defeat Modal */}
-                    {showDefeat && (
+                    {/* Defeat Modal - Battle Tab Only */}
+                    {currentView === 'battle' && showDefeat && (
                         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-red-900 to-black rounded-3xl p-12 text-center max-w-lg border-8 border-red-700 shadow-2xl">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-red-500 mb-4">
@@ -3027,8 +3135,8 @@
                         </div>
                     )}
 
-                    {/* Boss Intro */}
-                    {showBossIntro && gameState.bossData && (
+                    {/* Boss Intro - Battle Tab Only */}
+                    {currentView === 'battle' && showBossIntro && gameState.bossData && (
                         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
                             <div className="text-center boss-entrance">
                                 <div className="text-9xl mb-8 pulse-glow" style={{color: '#ff4444'}}>{gameState.bossData.emoji}</div>
@@ -3040,8 +3148,8 @@
                         </div>
                     )}
 
-                    {/* Figurehead Unlock */}
-                    {showFigureheadUnlock && unlockedFigurehead && (
+                    {/* Figurehead Unlock - Battle Tab Only */}
+                    {currentView === 'battle' && showFigureheadUnlock && unlockedFigurehead && (
                         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-purple-800 to-pink-900 rounded-3xl p-12 text-center max-w-lg border-8 border-purple-400 shadow-2xl unlock-burst">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
@@ -3060,8 +3168,8 @@
                         </div>
                     )}
 
-                    {/* Ship Unlock */}
-                    {showShipUnlock && unlockedShip && (
+                    {/* Ship Unlock - Battle Tab Only */}
+                    {currentView === 'battle' && showShipUnlock && unlockedShip && (
                         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
                             <div className="bg-gradient-to-br from-blue-800 to-cyan-900 rounded-3xl p-12 text-center max-w-lg border-8 border-blue-400 shadow-2xl unlock-burst">
                                 <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
@@ -3384,18 +3492,43 @@
                                         </div>
                                     </div>
 
-                                    <div className="toggle-container">
-                                        <label className="toggle-label">Repeatable Daily?</label>
-                                        <button
-                                            onClick={() => setChoreForm(prev => ({ ...prev, repeatable: !prev.repeatable }))}
-                                            className={`w-14 h-8 rounded-full transition-all ${
-                                                choreForm.repeatable ? 'bg-green-500' : 'bg-gray-300'
-                                            }`}
-                                        >
-                                            <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                                                choreForm.repeatable ? 'translate-x-7' : 'translate-x-1'
-                                            }`}></div>
-                                        </button>
+                                    <div className="space-y-2">
+                                        <label className="toggle-label block mb-2">Repeat Options</label>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={() => setChoreForm(prev => ({ ...prev, repeatType: 'once' }))}
+                                                className={`p-3 rounded-xl text-left transition-all ${
+                                                    choreForm.repeatType === 'once'
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                <span className="font-semibold">🔲 One-time only</span>
+                                                <span className="block text-sm opacity-80">Complete once, then remove</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setChoreForm(prev => ({ ...prev, repeatType: 'daily' }))}
+                                                className={`p-3 rounded-xl text-left transition-all ${
+                                                    choreForm.repeatType === 'daily'
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                <span className="font-semibold">🔄 Repeat daily</span>
+                                                <span className="block text-sm opacity-80">Resets each day</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setChoreForm(prev => ({ ...prev, repeatType: 'multiple' }))}
+                                                className={`p-3 rounded-xl text-left transition-all ${
+                                                    choreForm.repeatType === 'multiple'
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                <span className="font-semibold">🔁 Multiple per day</span>
+                                                <span className="block text-sm opacity-80">Can complete multiple times daily</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -3435,37 +3568,45 @@
                                 </p>
 
                                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                                    {pendingApproval.map(chore => (
-                                        <div key={chore.id} className="parent-review-card">
-                                            <div className="flex items-center gap-4 mb-3">
-                                                <span className="text-4xl">{chore.icon}</span>
-                                                <div className="flex-1">
-                                                    <div className="font-bold text-lg text-gray-800">{chore.name}</div>
-                                                    <div className="flex items-center gap-2 text-purple-600">
-                                                        <span>💎 {chore.totalPoints} gems</span>
-                                                        {chore.streakBonus > 0 && (
-                                                            <span className="text-orange-500">(+{chore.streakBonus} streak bonus)</span>
-                                                        )}
+                                    {pendingApproval.map(chore => {
+                                        const key = chore.approvalId || chore.id;
+                                        return (
+                                            <div key={key} className="parent-review-card">
+                                                <div className="flex items-center gap-4 mb-3">
+                                                    <span className="text-4xl">{chore.icon}</span>
+                                                    <div className="flex-1">
+                                                        <div className="font-bold text-lg text-gray-800">
+                                                            {chore.name}
+                                                            {chore.repeatType === 'multiple' && (
+                                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-2">🔁</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-purple-600">
+                                                            <span>💎 {chore.totalPoints} gems</span>
+                                                            {chore.streakBonus > 0 && (
+                                                                <span className="text-orange-500">(+{chore.streakBonus} streak bonus)</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="review-actions">
-                                                <button
-                                                    onClick={() => setReviewDecision(chore.id, 'pass')}
-                                                    className={`review-btn pass ${reviewDecisions[chore.id] === 'pass' ? 'ring-4 ring-green-300' : ''}`}
-                                                >
-                                                    ✅ Approve
-                                                </button>
-                                                <button
-                                                    onClick={() => setReviewDecision(chore.id, 'fail')}
-                                                    className={`review-btn fail ${reviewDecisions[chore.id] === 'fail' ? 'ring-4 ring-red-300' : ''}`}
-                                                >
-                                                    ❌ Redo
-                                                </button>
+                                                <div className="review-actions">
+                                                    <button
+                                                        onClick={() => setReviewDecision(key, 'pass')}
+                                                        className={`review-btn pass ${reviewDecisions[key] === 'pass' ? 'ring-4 ring-green-300' : ''}`}
+                                                    >
+                                                        ✅ Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setReviewDecision(key, 'fail')}
+                                                        className={`review-btn fail ${reviewDecisions[key] === 'fail' ? 'ring-4 ring-red-300' : ''}`}
+                                                    >
+                                                        ❌ Redo
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="mt-6 pt-4 border-t">
