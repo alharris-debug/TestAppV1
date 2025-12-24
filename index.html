@@ -362,6 +362,31 @@
             transition: width 0.1s linear;
         }
 
+        .enemy-action-bar.enemy-ready {
+            background: rgba(231, 76, 60, 0.3);
+            animation: enemy-pulse 0.3s ease-in-out infinite alternate;
+        }
+
+        .enemy-warning {
+            color: #ff4444;
+            font-weight: bold;
+            animation: blink-warning 0.5s ease-in-out infinite alternate;
+        }
+
+        .enemy-fill-ready {
+            background: linear-gradient(90deg, #ff4444, #ff0000) !important;
+        }
+
+        @keyframes enemy-pulse {
+            from { box-shadow: 0 0 5px rgba(231, 76, 60, 0.5); }
+            to { box-shadow: 0 0 15px rgba(231, 76, 60, 0.8); }
+        }
+
+        @keyframes blink-warning {
+            from { opacity: 1; }
+            to { opacity: 0.6; }
+        }
+
         /* Chore Management Styles */
         .modal-overlay {
             position: fixed;
@@ -1514,6 +1539,7 @@
             const [autoBattle, setAutoBattle] = useState(savedGame?.autoBattle || false);
             const lastTimeRef = useRef(0);
             const gameLoopRef = useRef(null);
+            const attackInProgressRef = useRef(false);  // Prevents multi-click damage bug
 
             const [showLootReveal, setShowLootReveal] = useState(false);
             const [currentLoot, setCurrentLoot] = useState(null);
@@ -2237,27 +2263,32 @@
             };
 
             const playerAttack = () => {
-                if (!gameState.inBattle || gameState.playerCooldown > 0) return;
+                // Prevent multi-click bug: check both state and ref
+                if (!gameState.inBattle || gameState.playerCooldown > 0 || attackInProgressRef.current) return;
+
+                // Lock attack immediately with ref (synchronous)
+                attackInProgressRef.current = true;
 
                 setGameState(prev => ({ ...prev, playerCooldown: getPlayerCooldown() }));
                 window.SoundSystem.cannonFire();
-                
+
                 if (playerShipRef.current) {
                     playerShipRef.current.classList.add('attacking');
                     setTimeout(() => {
                         if (playerShipRef.current) playerShipRef.current.classList.remove('attacking');
                     }, 600);
                 }
-                
+
                 setTimeout(() => {
-                    const damage = gameState.player.damage + Math.random() * 10;
-                    showDamageNumber('enemy', damage);
-                    window.SoundSystem.shipHit();
-                    addLog(`âš”️ You fire your cannons! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
-                    
                     setGameState(prev => {
+                        // Calculate damage inside setGameState to use current state
+                        const damage = prev.player.damage + Math.random() * 10;
+                        showDamageNumber('enemy', damage);
+                        window.SoundSystem.shipHit();
+                        addLog(`⚔️ You fire your cannons! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
+
                         const newHealth = prev.enemy.health - damage;
-                        
+
                         if (newHealth <= 0) {
                             setTimeout(() => handleVictory(), 500);
                             return {
@@ -2266,14 +2297,15 @@
                                 inBattle: false
                             };
                         }
-                        
-                        // Real-time: enemy attacks via game loop
-                        
+
                         return {
                             ...prev,
                             enemy: { ...prev.enemy, health: newHealth }
                         };
                     });
+
+                    // Release attack lock after damage is applied
+                    attackInProgressRef.current = false;
                 }, 600);
             };
 
@@ -2896,7 +2928,45 @@
                                     )}
                                 </div>
 
-                                {!gameState.inBattle ? (
+                                {/* Inline Victory State */}
+                                {showVictory ? (
+                                    <div className="bg-gradient-to-br from-yellow-600 to-orange-600 rounded-3xl p-12 text-center border-8 border-yellow-400 shadow-2xl">
+                                        <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
+                                            🏆 VICTORY! 🏆
+                                        </h2>
+                                        <p className="text-2xl text-white mb-8">Level {gameState.level} Complete!</p>
+                                        <button
+                                            onClick={nextLevel}
+                                            style={{fontFamily: 'Cinzel'}}
+                                            className="px-12 py-4 bg-white text-orange-600 rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
+                                        >
+                                            NEXT LEVEL ⚔️
+                                        </button>
+                                    </div>
+                                ) : showDefeat ? (
+                                    <div className="bg-gradient-to-br from-red-900 to-black rounded-3xl p-12 text-center border-8 border-red-700 shadow-2xl">
+                                        <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-red-500 mb-4">
+                                            💀 DEFEATED 💀
+                                        </h2>
+                                        {gameState.isBoss ? (
+                                            <>
+                                                <p className="text-xl text-white mb-4">The boss was too strong!</p>
+                                                <p className="text-lg text-gray-300 mb-8">
+                                                    Back to Level {getBlockStart(gameState.level)} to train.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="text-xl text-gray-300 mb-8">Your ship has been sunk!</p>
+                                        )}
+                                        <button
+                                            onClick={restartBattle}
+                                            style={{fontFamily: 'Cinzel'}}
+                                            className="px-12 py-4 bg-red-600 text-white rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
+                                        >
+                                            {gameState.isBoss ? 'BACK TO TRAINING ⚔️' : 'TRY AGAIN ⚔️'}
+                                        </button>
+                                    </div>
+                                ) : !gameState.inBattle ? (
                                     <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-12 text-center">
                                         <div className="text-6xl mb-4">{currentShipData?.emoji || '🚣'}</div>
                                         <div className="text-2xl text-white mb-4">{currentShipData?.name || 'Rusty Raft'}</div>
@@ -2968,12 +3038,18 @@
                                             </div>
                                         </div>
 
-                                        {/* Enemy Action Indicator */}
-                                        <div className="enemy-action-bar">
-                                            <div className="enemy-action-label">Enemy preparing to attack...</div>
+                                        {/* Enemy Attack Warning */}
+                                        <div className={`enemy-action-bar ${gameState.enemyCooldown <= 0.5 ? 'enemy-ready' : ''}`}>
+                                            <div className="enemy-action-label">
+                                                {gameState.enemyCooldown <= 0.5 ? (
+                                                    <span className="enemy-warning">⚠️ INCOMING ATTACK!</span>
+                                                ) : (
+                                                    <span>🏴‍☠️ Enemy reloading... {gameState.enemyCooldown.toFixed(1)}s</span>
+                                                )}
+                                            </div>
                                             <div className="enemy-cooldown-bar">
                                                 <div
-                                                    className="enemy-cooldown-fill"
+                                                    className={`enemy-cooldown-fill ${gameState.enemyCooldown <= 0.5 ? 'enemy-fill-ready' : ''}`}
                                                     style={{width: `${gameState.enemy.fireCooldown > 0 ? ((1 - gameState.enemyCooldown / gameState.enemy.fireCooldown) * 100) : 0}%`}}
                                                 ></div>
                                             </div>
@@ -3088,52 +3164,7 @@
                         </div>
                     )}
 
-                    {/* Victory Modal - Battle Tab Only */}
-                    {currentView === 'battle' && showVictory && (
-                        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-                            <div className="bg-gradient-to-br from-yellow-600 to-orange-600 rounded-3xl p-12 text-center max-w-lg border-8 border-yellow-400 shadow-2xl">
-                                <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
-                                    🏆 VICTORY! 🏆
-                                </h2>
-                                <p className="text-2xl text-white mb-8">Level {gameState.level} Complete!</p>
-                                <button
-                                    onClick={nextLevel}
-                                    style={{fontFamily: 'Cinzel'}}
-                                    className="px-12 py-4 bg-white text-orange-600 rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
-                                >
-                                    NEXT LEVEL ⚔️
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Defeat Modal - Battle Tab Only */}
-                    {currentView === 'battle' && showDefeat && (
-                        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-                            <div className="bg-gradient-to-br from-red-900 to-black rounded-3xl p-12 text-center max-w-lg border-8 border-red-700 shadow-2xl">
-                                <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-red-500 mb-4">
-                                    💀 DEFEATED 💀
-                                </h2>
-                                {gameState.isBoss ? (
-                                    <>
-                                        <p className="text-xl text-white mb-4">The boss was too strong!</p>
-                                        <p className="text-lg text-gray-300 mb-8">
-                                            Back to Level {getBlockStart(gameState.level)} to train.
-                                        </p>
-                                    </>
-                                ) : (
-                                    <p className="text-xl text-gray-300 mb-8">Your ship has been sunk!</p>
-                                )}
-                                <button
-                                    onClick={restartBattle}
-                                    style={{fontFamily: 'Cinzel'}}
-                                    className="px-12 py-4 bg-red-600 text-white rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
-                                >
-                                    {gameState.isBoss ? 'BACK TO TRAINING ⚔️' : 'TRY AGAIN ⚔️'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Boss Intro - Battle Tab Only */}
                     {currentView === 'battle' && showBossIntro && gameState.bossData && (
