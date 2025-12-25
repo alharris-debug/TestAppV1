@@ -236,6 +236,28 @@
             transition: height 0.1s linear;
         }
 
+        /* Progress bar that fills at bottom of button */
+        .btn-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 8px;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
+            border-radius: 0 0 12px 12px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(244, 208, 63, 0.5);
+        }
+
+        .btn-progress-bar.ready {
+            width: 100% !important;
+            animation: progress-ready-glow 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes progress-ready-glow {
+            from { box-shadow: 0 0 10px rgba(244, 208, 63, 0.5); }
+            to { box-shadow: 0 0 20px rgba(244, 208, 63, 0.9); }
+        }
+
         .btn-label {
             position: relative;
             z-index: 1;
@@ -2307,6 +2329,10 @@ const LOOT_TABLES = {
             };
 
             const selectShip = (shipId) => {
+                // Block ship changes during active battle
+                if (gameState.battlePhase === BATTLE_PHASES.FIGHTING) {
+                    return;
+                }
                 if (ownedShips.includes(shipId)) {
                     setCurrentShip(shipId);
                     window.SoundSystem.buttonClick();
@@ -2530,28 +2556,13 @@ const LOOT_TABLES = {
             };
 
             const handleVictory = () => {
-                const lootItem = rollLoot(gameState.level, battlesSinceRare);
-                setCurrentLoot(lootItem);
-                
-                if (lootItem.rarity === 'rare' || lootItem.rarity === 'legendary') {
-                    setBattlesSinceRare(0);
-                } else {
-                    setBattlesSinceRare(b => b + 1);
-                }
-                
-                setLootInventory(prev => [...prev, lootItem]);
-                
-                const currentEquipped = equipped[lootItem.type];
-                if (!currentEquipped || lootItem.power > currentEquipped.power) {
-                    setEquipped(prev => ({ ...prev, [lootItem.type]: lootItem }));
-                }
-                
+                // Calculate and award loot currency directly (no loot items or popup)
                 if (gameState.isBoss && gameState.bossData) {
                     const gemReward = gameState.level * 5 + 10;
                     setGems(g => g + gemReward);
-                    setCurrentLoot(prev => ({ ...prev, gemReward, lootReward: 0 }));
                     window.SoundSystem.bossDefeated();
-                    
+
+                    // Award figurehead from boss
                     const figurehead = gameState.bossData.figurehead;
                     if (!figureheads.find(f => f.id === figurehead.id)) {
                         setFigureheads(prev => [...prev, figurehead]);
@@ -2560,31 +2571,17 @@ const LOOT_TABLES = {
                             setShowFigureheadUnlock(true);
                             window.SoundSystem.figureheadUnlock();
                             createConfetti();
-                        }, 2000);
+                        }, 1000);
                     }
                 } else {
+                    // Award loot currency for regular battles
                     const lootReward = gameState.level * 3 + 5;
                     setLoot(l => l + lootReward);
-                    setCurrentLoot(prev => ({ ...prev, lootReward, gemReward: 0 }));
                     window.SoundSystem.victory();
                 }
-                
-                setLootRevealed(false);
-                setShowLootReveal(true);
-                
-                setTimeout(() => {
-                    setLootRevealed(true);
-                    if (lootItem.rarity === 'legendary') {
-                        window.SoundSystem.lootRevealLegendary();
-                        document.body.classList.add('screen-shake');
-                        createConfetti();
-                        setTimeout(() => document.body.classList.remove('screen-shake'), 500);
-                    } else if (lootItem.rarity === 'rare') {
-                        window.SoundSystem.lootRevealRare();
-                    } else {
-                        window.SoundSystem.lootRevealCommon();
-                    }
-                }, 1000);
+
+                // Go directly to victory phase (inline display, no popup)
+                setGameState(prev => ({ ...prev, battlePhase: BATTLE_PHASES.VICTORY }));
             };
 
             const closeLootReveal = () => {
@@ -2746,7 +2743,7 @@ const LOOT_TABLES = {
                         
                         {/* Navigation */}
                         <div className="flex gap-2 mb-6 overflow-x-auto">
-                            {['tasks', 'avatar', 'store', 'battle', 'collection'].map(view => (
+                            {['tasks', 'battle', 'collection'].map(view => (
                                 <button
                                     key={view}
                                     onClick={() => handleViewChange(view)}
@@ -2757,8 +2754,6 @@ const LOOT_TABLES = {
                                     }`}
                                 >
                                     {view === 'tasks' && '📝'}
-                                    {view === 'avatar' && '👤'}
-                                    {view === 'store' && '🏪'}
                                     {view === 'battle' && '⚔️'}
                                     {view === 'collection' && '🎒'}
                                     <span className="ml-1 capitalize">{view}</span>
@@ -2850,79 +2845,8 @@ const LOOT_TABLES = {
                             </div>
                         )}
                         
-                        {/* Avatar View */}
-                        {currentView === 'avatar' && (
-                            <div className="bg-white rounded-3xl shadow-2xl p-8">
-                                <h2 className="text-3xl font-bold text-purple-600 mb-6">My Avatar</h2>
-                                <div className="flex flex-col items-center mb-8">
-                                    <Avatar />
-                                </div>
-                                
-                                <div className="space-y-6">
-                                    {['skin', 'outfit', 'accessory'].map(type => (
-                                        <div key={type}>
-                                            <h3 className="text-2xl font-bold text-gray-700 mb-3 capitalize">{type}s</h3>
-                                            <div className="grid grid-cols-4 gap-3">
-                                                {STORE_ITEMS.filter(item => item.type === type && inventory.includes(item.id)).map(item => (
-                                                    <button
-                                                        key={item.id}
-                                                        onClick={() => equipItem(item.id, type)}
-                                                        className={`p-4 rounded-xl text-4xl transition-all ${
-                                                            avatar[type] === item.id
-                                                                ? 'bg-purple-500 scale-110'
-                                                                : 'bg-purple-100 hover:bg-purple-200'
-                                                        }`}
-                                                    >
-                                                        {item.emoji}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        
-                        {/* Store View */}
-                        {currentView === 'store' && (
-                            <div className="bg-white rounded-3xl shadow-2xl p-8">
-                                <h2 className="text-3xl font-bold text-purple-600 mb-6">💎 Gem Store</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {STORE_ITEMS.map(item => {
-                                        const owned = inventory.includes(item.id);
-                                        const canAfford = gems >= item.price;
-                                        
-                                        return (
-                                            <div
-                                                key={item.id}
-                                                className={`p-6 rounded-2xl border-4 transition-all ${
-                                                    owned ? 'bg-green-50 border-green-400'
-                                                    : canAfford ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 hover:scale-105 cursor-pointer'
-                                                    : 'bg-gray-100 border-gray-300 opacity-60'
-                                                }`}
-                                                onClick={() => !owned && canAfford && buyItem(item)}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="text-6xl">{item.emoji}</span>
-                                                        <div>
-                                                            <h3 className="text-xl font-bold text-gray-800">{item.name}</h3>
-                                                            <div className="flex items-center gap-2 mt-2">
-                                                                <GemIcon size="w-6 h-6" />
-                                                                <span className="text-lg font-semibold text-purple-700">{item.price}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {owned ? <span className="text-4xl">âœ“</span>
-                                                    : canAfford ? <button className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600">Buy</button>
-                                                    : <span className="text-2xl">🔒</span>}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
+                        {/* Avatar View - hidden for now */}
+                        {/* Store View - hidden for now */}
 
                         {/* Collection View */}
                         {currentView === 'collection' && (
@@ -2970,10 +2894,8 @@ const LOOT_TABLES = {
                                     )}
                                 </div>
 
-{/* Figureheads section hidden for now */}
-
+                                {/* Figureheads section hidden for now */}
                                 {/* Equipment and Loot sections hidden for now */}
-                                </div>
                             </div>
                         )}
 
@@ -2996,7 +2918,14 @@ const LOOT_TABLES = {
                                         <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
                                             🏆 VICTORY! 🏆
                                         </h2>
-                                        <p className="text-2xl text-white mb-8">Level {gameState.level} Complete!</p>
+                                        <p className="text-2xl text-white mb-4">Level {gameState.level} Complete!</p>
+                                        <p className="text-3xl text-yellow-200 mb-8">
+                                            {gameState.isBoss ? (
+                                                <>💎 +{gameState.level * 5 + 10} Gems!</>
+                                            ) : (
+                                                <>🪙 +{gameState.level * 3 + 5} Loot!</>
+                                            )}
+                                        </p>
                                         <button
                                             onClick={nextLevel}
                                             style={{fontFamily: 'Cinzel'}}
@@ -3184,7 +3113,7 @@ const LOOT_TABLES = {
                                             <div className="enemy-cooldown-bar">
                                                 <div
                                                     className={`enemy-cooldown-fill ${gameState.enemyCooldown <= 0.5 ? 'enemy-fill-ready' : ''}`}
-                                                    style={{width: `${gameState.enemy.fireCooldown > 0 ? ((1 - gameState.enemyCooldown / gameState.enemy.fireCooldown) * 100) : 0}%`}}
+                                                    style={{width: `${(gameState.enemy?.fireCooldown || 3.5) > 0 ? ((1 - gameState.enemyCooldown / (gameState.enemy?.fireCooldown || 3.5)) * 100) : 100}%`}}
                                                 ></div>
                                             </div>
                                         </div>
@@ -3211,8 +3140,8 @@ const LOOT_TABLES = {
                                                 className={`battle-action-btn fire ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
                                             >
                                                 <div
-                                                    className="cooldown-overlay"
-                                                    style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
+                                                    className={`btn-progress-bar ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
+                                                    style={{width: `${gameState.playerCooldown > 0 ? ((1 - gameState.playerCooldown / getPlayerCooldown()) * 100) : 100}%`}}
                                                 ></div>
                                                 <span className="btn-label">💣 FIRE!</span>
                                                 <span className="cooldown-text">
@@ -3226,8 +3155,8 @@ const LOOT_TABLES = {
                                                 className={`battle-action-btn repair ${gameState.playerCooldown <= 0 && gameState.player.health < gameState.player.maxHealth ? 'ready' : ''}`}
                                             >
                                                 <div
-                                                    className="cooldown-overlay"
-                                                    style={{height: `${(gameState.playerCooldown / getPlayerCooldown()) * 100}%`}}
+                                                    className={`btn-progress-bar ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
+                                                    style={{width: `${gameState.playerCooldown > 0 ? ((1 - gameState.playerCooldown / getPlayerCooldown()) * 100) : 100}%`}}
                                                 ></div>
                                                 <span className="btn-label">🔧 REPAIR</span>
                                                 <span className="cooldown-text">
