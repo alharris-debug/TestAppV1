@@ -2334,35 +2334,26 @@ const LOOT_TABLES = {
 
             // Safe log renderer - parses log strings and renders without dangerouslySetInnerHTML
             const renderLogEntry = (log) => {
-                // Parse simple patterns: <span class="log-damage">X</span> and <span class="log-heal">X</span>
-                const parts = [];
-                let remaining = log;
-                let key = 0;
+                // Simple approach: split by span tags and reconstruct
+                if (!log.includes('<span')) {
+                    return log;
+                }
                 
-                const spanRegex = /<span class="(log-damage|log-heal)">([^<]+)<\/span>/g;
-                let lastIndex = 0;
-                let match;
+                // Replace span tags with markers, then split
+                const processed = log
+                    .replace(/<span class="log-damage">([^<]+)<\/span>/g, '|||DAMAGE:$1|||')
+                    .replace(/<span class="log-heal">([^<]+)<\/span>/g, '|||HEAL:$1|||');
                 
-                while ((match = spanRegex.exec(log)) !== null) {
-                    // Add text before the match
-                    if (match.index > lastIndex) {
-                        parts.push(<span key={key++}>{log.slice(lastIndex, match.index)}</span>);
+                const parts = processed.split('|||').filter(p => p);
+                
+                return parts.map((part, idx) => {
+                    if (part.startsWith('DAMAGE:')) {
+                        return <span key={idx} className="log-damage">{part.slice(7)}</span>;
+                    } else if (part.startsWith('HEAL:')) {
+                        return <span key={idx} className="log-heal">{part.slice(5)}</span>;
                     }
-                    // Add the styled span
-                    parts.push(
-                        <span key={key++} className={match[1]}>
-                            {match[2]}
-                        </span>
-                    );
-                    lastIndex = match.index + match[0].length;
-                }
-                
-                // Add remaining text
-                if (lastIndex < log.length) {
-                    parts.push(<span key={key++}>{log.slice(lastIndex)}</span>);
-                }
-                
-                return parts.length > 0 ? parts : log;
+                    return <span key={idx}>{part}</span>;
+                });
             };
 
             const showDamageNumber = (target, damage, isHeal = false) => {
