@@ -1806,7 +1806,7 @@ const LOOT_TABLES = {
                 const today = new Date().toDateString();
                 if (lastPlayDate && lastPlayDate !== today) {
                     // Reset daily and multiple tasks, remove completed one-time tasks
-                    setTasks(tasks.filter(task => {
+                    setTasks(prevTasks => prevTasks.filter(task => {
                         // Remove completed one-time tasks
                         if (task.repeatType === 'once' && task.completed) return false;
                         return true;
@@ -1827,7 +1827,7 @@ const LOOT_TABLES = {
                     }
                 }
                 setLastPlayDate(today);
-            }, []);
+            }, [lastPlayDate]);
 
             // ============ SOUND TOGGLE ============
 
@@ -3054,13 +3054,14 @@ const LOOT_TABLES = {
                                                 <div ref={playerShipRef} className="ship player-ship flex justify-center mb-4">
                                                     <PirateShipSVG isPlayer={true} size={gameState.player.size} />
                                                 </div>
-                                                <div className="space-y-2 text-white">
-                                                    <div className="flex justify-between"><span>âš”️ Cannons:</span><span className="font-bold text-yellow-400">{gameState.player.cannons}</span></div>
-                                                    <div className="flex justify-between"><span>💥 Crew:</span><span className="font-bold text-yellow-400">{gameState.player.crew}</span></div>
-                                                    <div className="health-bar mt-4">
-                                                        <div className="health-fill" style={{width: `${(gameState.player.health / gameState.player.maxHealth) * 100}%`}}></div>
-                                                        <div className="health-text">{Math.floor(gameState.player.health)} / {gameState.player.maxHealth}</div>
-                                                    </div>
+                                                {/* Player Stats */}
+                                                <div className="grid grid-cols-2 gap-2 text-sm text-white mb-3">
+                                                    <div className="text-center">💥 <span className="text-yellow-400 font-bold">{gameState.player.damage}</span></div>
+                                                    <div className="text-center">🔧 <span className="text-green-400 font-bold">+{gameState.player.repairAmount}</span></div>
+                                                </div>
+                                                <div className="health-bar">
+                                                    <div className="health-fill" style={{width: `${(gameState.player.health / gameState.player.maxHealth) * 100}%`}}></div>
+                                                    <div className="health-text">{Math.floor(gameState.player.health)} / {gameState.player.maxHealth}</div>
                                                 </div>
                                             </div>
 
@@ -3079,13 +3080,13 @@ const LOOT_TABLES = {
                                                 <div ref={enemyShipRef} className="ship enemy-ship flex justify-center mb-4">
                                                     <PirateShipSVG isPlayer={false} size={gameState.enemy.size} />
                                                 </div>
-                                                <div className="space-y-2 text-white">
-                                                    <div className="flex justify-between"><span>âš”️ Cannons:</span><span className="font-bold text-yellow-400">{gameState.enemy.cannons}</span></div>
-                                                    <div className="flex justify-between"><span>💥 Crew:</span><span className="font-bold text-yellow-400">{gameState.enemy.crew}</span></div>
-                                                    <div className="health-bar mt-4">
-                                                        <div className="health-fill" style={{width: `${(gameState.enemy.health / gameState.enemy.maxHealth) * 100}%`}}></div>
-                                                        <div className="health-text">{Math.floor(gameState.enemy.health)} / {Math.floor(gameState.enemy.maxHealth)}</div>
-                                                    </div>
+                                                {/* Enemy Stats */}
+                                                <div className="text-center text-sm text-white mb-3">
+                                                    <span>💥 <span className="text-red-400 font-bold">{gameState.enemy.damage}</span></span>
+                                                </div>
+                                                <div className="health-bar">
+                                                    <div className="health-fill" style={{width: `${(gameState.enemy.health / gameState.enemy.maxHealth) * 100}%`}}></div>
+                                                    <div className="health-text">{Math.floor(gameState.enemy.health)} / {Math.floor(gameState.enemy.maxHealth)}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -3101,35 +3102,12 @@ const LOOT_TABLES = {
                                             </div>
                                         </div>
 
-                                        {/* Enemy Attack Warning */}
-                                        <div className={`enemy-action-bar ${gameState.enemyCooldown <= 0.5 ? 'enemy-ready' : ''}`}>
-                                            <div className="enemy-action-label">
-                                                {gameState.enemyCooldown <= 0.5 ? (
-                                                    <span className="enemy-warning">⚠️ INCOMING ATTACK!</span>
-                                                ) : (
-                                                    <span>🏴‍☠️ Enemy reloading... {gameState.enemyCooldown.toFixed(1)}s</span>
-                                                )}
+                                        {/* Enemy Attack Warning - simple text only */}
+                                        {gameState.enemyCooldown <= 0.5 && (
+                                            <div className="text-center mb-4 py-2 bg-red-900 bg-opacity-60 rounded-xl border-2 border-red-500 animate-pulse">
+                                                <span className="text-red-400 font-bold text-lg">⚠️ INCOMING ATTACK!</span>
                                             </div>
-                                            <div className="enemy-cooldown-bar">
-                                                <div
-                                                    className={`enemy-cooldown-fill ${gameState.enemyCooldown <= 0.5 ? 'enemy-fill-ready' : ''}`}
-                                                    style={{width: `${(gameState.enemy?.fireCooldown || 3.5) > 0 ? ((1 - gameState.enemyCooldown / (gameState.enemy?.fireCooldown || 3.5)) * 100) : 100}%`}}
-                                                ></div>
-                                            </div>
-                                        </div>
-
-                                        {/* Cooldown Progress Bar */}
-                                        <div className="mb-4 px-4">
-                                            <div className="cooldown-progress-container">
-                                                <div
-                                                    className={`cooldown-progress-bar ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
-                                                    style={{width: `${gameState.playerCooldown > 0 ? ((1 - gameState.playerCooldown / getPlayerCooldown()) * 100) : 100}%`}}
-                                                ></div>
-                                                <span className="cooldown-progress-label">
-                                                    {gameState.playerCooldown > 0 ? `⏳ ${gameState.playerCooldown.toFixed(1)}s` : '⚡ READY!'}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        )}
 
                                         {/* Combat Actions with Cooldowns */}
                                         <div className="flex gap-4 justify-center mb-6 flex-wrap">
