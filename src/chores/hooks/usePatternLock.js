@@ -125,16 +125,13 @@ export const usePatternLock = ({
             }
 
             setTimeout(() => {
+                // Clear all state first
                 setIsSetupMode(false);
                 setPatternInput([]);
                 setSuccess(false);
+                setPendingAction(null);
 
-                if (pendingAction) {
-                    pendingAction();
-                    setPendingAction(null);
-                }
-
-                // Also call verification success after setup (grants access)
+                // Then call the success callback
                 if (onVerificationSuccess) {
                     onVerificationSuccess();
                 }
@@ -149,14 +146,12 @@ export const usePatternLock = ({
                 }
 
                 setTimeout(() => {
+                    // Clear all state first
                     setPatternInput([]);
                     setSuccess(false);
+                    setPendingAction(null);
 
-                    if (pendingAction) {
-                        pendingAction();
-                        setPendingAction(null);
-                    }
-
+                    // Then call the success callback
                     if (onVerificationSuccess) {
                         onVerificationSuccess();
                     }
