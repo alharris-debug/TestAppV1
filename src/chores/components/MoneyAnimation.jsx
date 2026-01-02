@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatCents, calculateBillsForAnimation } from '../utils/currency.js';
+import { formatCents, calculateBillCount } from '../utils/currency.js';
 
 /**
  * Single Flying Bill Component
@@ -163,7 +163,7 @@ export const CashBurst = ({
     useEffect(() => {
         if (!active || !amount) return;
 
-        const billCount = calculateBillsForAnimation(amount);
+        const billCount = calculateBillCount(amount);
         const newBills = [];
 
         for (let i = 0; i < billCount; i++) {
