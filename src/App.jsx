@@ -1,2294 +1,520 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-        
-        // ============ GAME DATA ============
-        
-        const SHIP_PROGRESSION = [
-            { id: 'starter', name: "Rusty Raft", cost: 0, size: "tiny", emoji: "🚣", description: "A humble beginning" },
-            { id: 'sloop', name: "Swift Sloop", cost: 50, size: "small", emoji: "⛵", description: "Quick and nimble" },
-            { id: 'brigantine', name: "Battle Brigantine", cost: 150, size: "medium", emoji: "🚢", description: "Ready for action" },
-            { id: 'galleon', name: "War Galleon", cost: 400, size: "large", emoji: "⚔️", description: "A force to reckon with" },
-            { id: 'frigate', name: "Doom Frigate", cost: 800, size: "huge", emoji: "🏴‍☠️", description: "Terror of the seas" },
-            { id: 'kraken', name: "Legendary Kraken", cost: 1500, size: "massive", emoji: "🦑", description: "Mythical destroyer" },
-            { id: 'destroyer', name: "Ultimate Destroyer", cost: 3000, size: "legendary", emoji: "👑", description: "The pinnacle of power" }
-        ];
+// Import Family Economy system
+import {
+    useFamilyEconomy,
+    usePatternLock,
+    useMoneyAnimations,
 
-        
-            // Battle phase states for clearer state machine
-            const BATTLE_PHASES = {
-                IDLE: 'IDLE',           // Not in battle, can start new battle
-                FIGHTING: 'FIGHTING',   // Active battle in progress
-                VICTORY: 'VICTORY',     // Battle won, showing victory screen
-                DEFEAT: 'DEFEAT'        // Battle lost, showing defeat screen
-            };
+    // Components
+    ActiveUserHeader,
+    UserSelector,
+    UserEditorModal,
+    JobCard,
+    JobList,
+    JobEditorModal,
+    TransactionHistory,
+    RecentTransactions,
+    TransactionSummaryCard,
+    ChoreCard,
+    ChoreEditorModal,
+    ChoreManagementModal,
+    ParentReviewModal,
+    PatternLockGrid,
+    PasswordSetupModal,
+    PasswordEntryModal,
 
-const LOOT_TABLES = {
-            hull: {
-                common: [
-                    { name: "Iron Nails", power: 5, emoji: "🔩" },
-                    { name: "Wooden Planks", power: 3, emoji: "🪵" },
-                    { name: "Tar Coating", power: 4, emoji: "🛢️" }
-                ],
-                rare: [
-                    { name: "Steel Plating", power: 15, emoji: "🛡️" },
-                    { name: "Reinforced Beams", power: 12, emoji: "âš™️" },
-                    { name: "Copper Lining", power: 10, emoji: "🥉" }
-                ],
-                legendary: [
-                    { name: "Mythril Hull", power: 30, emoji: "💎" },
-                    { name: "Dragon Scale Armor", power: 35, emoji: "🐉" },
-                    { name: "Enchanted Timber", power: 28, emoji: "✨" }
-                ]
-            },
-            sails: {
-                common: [
-                    { name: "Canvas Scraps", power: 3, emoji: "🧵" },
-                    { name: "Cotton Sails", power: 4, emoji: "🏳️" },
-                    { name: "Hemp Rigging", power: 5, emoji: "🪢" }
-                ],
-                rare: [
-                    { name: "Silk Sails", power: 10, emoji: "🎀" },
-                    { name: "Spider Silk Weave", power: 12, emoji: "🕸️" },
-                    { name: "Storm Sails", power: 14, emoji: "⛈️" }
-                ],
-                legendary: [
-                    { name: "Wind Spirit Sails", power: 25, emoji: "🌬️" },
-                    { name: "Phoenix Feather Sails", power: 30, emoji: "🔥" },
-                    { name: "Void Sails", power: 28, emoji: "🌌" }
-                ]
-            },
-            cannons: {
-                common: [
-                    { name: "Gunpowder", power: 2, emoji: "💥" },
-                    { name: "Iron Cannonballs", power: 3, emoji: "âš«" },
-                    { name: "Basic Fuses", power: 4, emoji: "🧨" }
-                ],
-                rare: [
-                    { name: "Explosive Rounds", power: 8, emoji: "💣" },
-                    { name: "Chain Shot", power: 10, emoji: "⛓️" },
-                    { name: "Grape Shot", power: 9, emoji: "🍇" }
-                ],
-                legendary: [
-                    { name: "Dragon Cannons", power: 20, emoji: "🐲" },
-                    { name: "Thunder Barrels", power: 22, emoji: "⚡" },
-                    { name: "Kraken Ink Bombs", power: 25, emoji: "🦑" }
-                ]
+    // Constants
+    CHORE_ICONS,
+    RECURRENCE_TYPE,
+
+    // Utilities
+    formatCents
+} from './chores';
+
+// Import styles
+import './chores/styles/chores.css';
+
+// ============ MAIN APP ============
+
+const FamilyEconomyApp = () => {
+    // Sound system (simplified)
+    const [soundEnabled, setSoundEnabled] = useState(true);
+    const soundSystem = {
+        play: (sound) => {
+            if (!soundEnabled) return;
+            // Could add actual sounds here
+        }
+    };
+
+    // Initialize Family Economy system
+    const economy = useFamilyEconomy({ soundSystem });
+
+    // Money animations
+    const { showEarning, showSpending, showCashBurst, AnimationOverlay } = useMoneyAnimations(soundSystem);
+
+    // Pattern lock for parent access
+    const [pendingAction, setPendingAction] = useState(null);
+    const patternLock = usePatternLock({
+        storedPassword: economy.parentPassword,
+        onPasswordSet: economy.setParentPassword,
+        onVerificationSuccess: () => {
+            if (pendingAction) {
+                pendingAction();
+                setPendingAction(null);
             }
-        };
-
-        // Boss every 10 levels
-        const BOSS_BATTLES = {
-            10: {
-                name: "Ghost Captain Morgan",
-                healthMultiplier: 3,
-                emoji: "💻",
-                figurehead: { id: 'golden_mermaid', name: "Golden Mermaid", emoji: "🧜‍♀️", description: "Lucky Treasure Finder" }
-            },
-            20: {
-                name: "The Kraken Mother",
-                healthMultiplier: 3.5,
-                emoji: "🦑",
-                figurehead: { id: 'dragon_skull', name: "Dragon Skull", emoji: "🐉", description: "Fear the Dragon" }
-            },
-            30: {
-                name: "Admiral Blackbeard's Ghost",
-                healthMultiplier: 4,
-                emoji: "💀",
-                figurehead: { id: 'phoenix', name: "Phoenix Rising", emoji: "🔥", description: "Never Surrender" }
-            },
-            40: {
-                name: "The Sea Serpent King",
-                healthMultiplier: 4.5,
-                emoji: "🐍",
-                figurehead: { id: 'serpent', name: "Serpent Crown", emoji: "🐍", description: "Ruler of the Deep" }
-            },
-            50: {
-                name: "The Dread Pizza",
-                healthMultiplier: 5,
-                emoji: "🍕",
-                figurehead: { id: 'pizza', name: "Pizza Slice", emoji: "🍕", description: "Deliciously Dangerous" }
-            }
-        };
-
-        const INITIAL_TASKS = [
-            { id: 1, name: 'Do the dishes', icon: '🍽️', completed: false, points: 5, repeatType: 'daily' },
-            { id: 2, name: 'Clean your room', icon: '🛏️', completed: false, points: 10, repeatType: 'daily' },
-            { id: 3, name: 'Take care of the cat', icon: '🐱', completed: false, points: 5, repeatType: 'multiple' },
-            { id: 4, name: 'Practice music', icon: '🎸', completed: false, points: 8, repeatType: 'daily' }
-        ];
-
-        const STORE_ITEMS = [
-            { id: 'cool', name: 'Cool Skin', type: 'skin', price: 15, emoji: '😎' },
-            { id: 'happy', name: 'Happy Skin', type: 'skin', price: 15, emoji: '😊' },
-            { id: 'star', name: 'Star Skin', type: 'skin', price: 20, emoji: '⭐' },
-            { id: 'superhero', name: 'Superhero Outfit', type: 'outfit', price: 25, emoji: '🦸' },
-            { id: 'wizard', name: 'Wizard Outfit', type: 'outfit', price: 25, emoji: '🧙' },
-            { id: 'ninja', name: 'Ninja Outfit', type: 'outfit', price: 30, emoji: '🥷' },
-            { id: 'crown', name: 'Royal Crown', type: 'accessory', price: 20, emoji: '👑' },
-            { id: 'sunglasses', name: 'Cool Sunglasses', type: 'accessory', price: 15, emoji: '🕶️' },
-            { id: 'hat', name: 'Party Hat', type: 'accessory', price: 12, emoji: '🎩' }
-        ];
-
-        // ============ UTILITY FUNCTIONS ============
-
-        const saveGame = (state, onError) => {
-            try {
-                const data = JSON.stringify({
-                    ...state,
-                    savedAt: new Date().toISOString()
-                });
-                localStorage.setItem('chorequest_save_v3', data);
-                return true;
-            } catch (e) {
-                console.error('Failed to save game:', e);
-                if (onError) onError(e.message || 'Failed to save progress');
-                return false;
-            }
-        };
-
-        const loadGame = () => {
-            try {
-                const saved = localStorage.getItem('chorequest_save_v3');
-                if (!saved) return null;
-                
-                const data = JSON.parse(saved);
-                
-                // Basic validation - ensure critical fields exist
-                if (typeof data !== 'object' || data === null) {
-                    console.warn('Invalid save data format');
-                    return null;
-                }
-                
-                // Ensure arrays are arrays (prevents crashes)
-                if (data.tasks && !Array.isArray(data.tasks)) data.tasks = [];
-                if (data.inventory && !Array.isArray(data.inventory)) data.inventory = [];
-                if (data.ownedShips && !Array.isArray(data.ownedShips)) data.ownedShips = ['starter'];
-                if (data.lootInventory && !Array.isArray(data.lootInventory)) data.lootInventory = [];
-                
-                return data;
-            } catch (e) {
-                console.error('Failed to load game:', e);
-                return null;
-            }
-        };
-
-        const rollLoot = (level, battlesSinceRare) => {
-            const roll = Math.random();
-            let rarity;
-            
-            if (battlesSinceRare >= 10) {
-                rarity = roll < 0.3 ? 'legendary' : 'rare';
-            } else if (roll <= 0.05) {
-                rarity = 'legendary';
-            } else if (roll <= 0.30) {
-                rarity = 'rare';
-            } else {
-                rarity = 'common';
-            }
-
-            const types = ['hull', 'sails', 'cannons'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            const items = LOOT_TABLES[type][rarity];
-            const item = items[Math.floor(Math.random() * items.length)];
-
-            return { ...item, type, rarity };
-        };
-
-        const createConfetti = () => {
-            // Clear any existing confetti first to prevent accumulation
-            document.querySelectorAll('.confetti-piece').forEach(p => p.remove());
-            
-            const colors = ['#ff6b35', '#f4d03f', '#9333ea', '#3b82f6', '#51cf66', '#ff69b4'];
-            const confettiPieces = [];
-            
-            for (let i = 0; i < 50; i++) {
-                const piece = document.createElement('div');
-                piece.className = 'confetti-piece';
-                piece.style.left = Math.random() * 100 + 'vw';
-                piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                piece.style.animationDelay = Math.random() * 0.5 + 's';
-                piece.style.transform = `rotate(${Math.random() * 360}deg)`;
-                document.body.appendChild(piece);
-                confettiPieces.push(piece);
-            }
-
-            setTimeout(() => confettiPieces.forEach(p => p.remove()), 3500);
-        };
-
-        // Calculate which 10-level block a level belongs to
-        const getLevelBlock = (level) => Math.floor((level - 1) / 10);
-        const getBlockStart = (level) => getLevelBlock(level) * 10 + 1;
-
-        // ============ MAIN APP ============
-        
-        const ChoreQuestApp = () => {
-            const savedGame = loadGame();
-            
-            const [currentView, setCurrentView] = useState('tasks');
-            const [gems, setGems] = useState(savedGame?.gems || 25);
-            const [loot, setLoot] = useState(savedGame?.loot || 0);
-            const [tasks, setTasks] = useState(savedGame?.tasks || INITIAL_TASKS);
-            const [streak, setStreak] = useState(savedGame?.streak || 0);
-            const [lastPlayDate, setLastPlayDate] = useState(savedGame?.lastPlayDate || null);
-            const [soundEnabled, setSoundEnabled] = useState(savedGame?.soundEnabled !== false);
-            const [saveError, setSaveError] = useState(null);
-            
-            const [avatar, setAvatar] = useState(savedGame?.avatar || {
-                skin: 'default', outfit: 'casual', accessory: 'none'
-            });
-            
-            const [inventory, setInventory] = useState(savedGame?.inventory || ['default', 'casual', 'none']);
-            const [celebration, setCelebration] = useState(false);
-            
-            const [currentShip, setCurrentShip] = useState(savedGame?.currentShip || 'starter');
-            const [ownedShips, setOwnedShips] = useState(savedGame?.ownedShips || ['starter']);
-            const [equipped, setEquipped] = useState(savedGame?.equipped || {
-                hull: null, sails: null, cannons: null, figurehead: null
-            });
-            const [lootInventory, setLootInventory] = useState(savedGame?.lootInventory || []);
-            const [figureheads, setFigureheads] = useState(savedGame?.figureheads || []);
-            const [battlesSinceRare, setBattlesSinceRare] = useState(savedGame?.battlesSinceRare || 0);
-
-            // Ship upgrade stats
-            const [shipStats, setShipStats] = useState(savedGame?.shipStats || {
-                firepower: { level: 1, base: 15, perLevel: 5 },
-                crew: { level: 1, base: 0, perLevel: 5 },      // % cooldown reduction
-                hull: { level: 1, base: 100, perLevel: 20 },
-                repair: { level: 1, base: 20, perLevel: 5 }
-            });
-
-            // Upgrade cost calculation (triangular formula)
-            const getUpgradeCost = (level) => {
-                const base = 10;
-                return base * (level + 1);
-            };
-
-            // Get computed stats from upgrade levels
-            const getComputedStats = useCallback(() => {
-                return {
-                    damage: shipStats.firepower.base + (shipStats.firepower.level - 1) * shipStats.firepower.perLevel,
-                    cooldownReduction: shipStats.crew.base + (shipStats.crew.level - 1) * shipStats.crew.perLevel,
-                    maxHealth: shipStats.hull.base + (shipStats.hull.level - 1) * shipStats.hull.perLevel,
-                    repairAmount: shipStats.repair.base + (shipStats.repair.level - 1) * shipStats.repair.perLevel
-                };
-            }, [shipStats]);
-
-            // Purchase upgrade
-            const purchaseUpgrade = (statKey) => {
-                const stat = shipStats[statKey];
-                const cost = getUpgradeCost(stat.level);
-
-                if (loot >= cost) {
-                    setLoot(l => l - cost);
-                    setShipStats(prev => ({
-                        ...prev,
-                        [statKey]: { ...prev[statKey], level: prev[statKey].level + 1 }
-                    }));
-                    window.SoundSystem.levelUp();
-                }
-            };
-
-            const [gameState, setGameState] = useState({
-                level: savedGame?.gameState?.level || 1,
-                player: {
-                    maxHealth: 100, health: 100, cannons: 1, crew: 5,
-                    size: SHIP_PROGRESSION.find(s => s.id === (savedGame?.currentShip || 'starter'))?.size || 'tiny',
-                    damage: 15, repairAmount: 20
-                },
-                enemy: {
-                    maxHealth: 50, health: 50, cannons: 1, crew: 3,
-                    size: 'Small', damage: 10, fireCooldown: 3.5, repairThreshold: 0.4
-                },
-                battlePhase: BATTLE_PHASES.IDLE, combatLog: [],
-                isBoss: false, bossData: null,
-                // Real-time battle cooldowns
-                playerCooldown: 0,
-                enemyCooldown: 0,
-                baseCooldown: 3.0
-            });
-
-            const [autoBattle, setAutoBattle] = useState(savedGame?.autoBattle || false);
-            const lastTimeRef = useRef(0);
-            const gameLoopRef = useRef(null);
-            const actionInProgressRef = useRef(false);  // Prevents multi-click bugs in attack/repair
-
-            const [showLootReveal, setShowLootReveal] = useState(false);
-            const [currentLoot, setCurrentLoot] = useState(null);
-            const [lootRevealed, setLootRevealed] = useState(false);
-            // Victory/Defeat now handled by gameState.battlePhase
-            const [showBossIntro, setShowBossIntro] = useState(false);
-            const [showFigureheadUnlock, setShowFigureheadUnlock] = useState(false);
-            const [unlockedFigurehead, setUnlockedFigurehead] = useState(null);
-            const [showShipUnlock, setShowShipUnlock] = useState(false);
-            const [unlockedShip, setUnlockedShip] = useState(null);
-
-            // ============ CHORE MANAGEMENT STATE ============
-            const [parentPassword, setParentPassword] = useState(savedGame?.parentPassword || null);
-            const [showPasswordSetup, setShowPasswordSetup] = useState(false);
-            const [showPasswordEntry, setShowPasswordEntry] = useState(false);
-            const [passwordError, setPasswordError] = useState(false);
-            const [passwordSuccess, setPasswordSuccess] = useState(false);
-            const [pendingPasswordAction, setPendingPasswordAction] = useState(null);
-
-            // Pattern lock state
-            const [patternInput, setPatternInput] = useState([]);
-            const [isDrawingPattern, setIsDrawingPattern] = useState(false);
-            const [currentPoint, setCurrentPoint] = useState(null);
-            const patternGridRef = useRef(null);
-            const dotRefs = useRef([]);
-
-            const [savedChores, setSavedChores] = useState(savedGame?.savedChores || []);
-            const [pendingApproval, setPendingApproval] = useState(savedGame?.pendingApproval || []);
-            const [showChoreManagement, setShowChoreManagement] = useState(false);
-            const [showParentReview, setShowParentReview] = useState(false);
-            const [choreManagementTab, setChoreManagementTab] = useState('active');
-            const [reviewDecisions, setReviewDecisions] = useState({});
-
-            const [editingChore, setEditingChore] = useState(null);
-            const [showChoreEditor, setShowChoreEditor] = useState(false);
-            const [choreForm, setChoreForm] = useState({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
-
-            const playerShipRef = useRef(null);
-            const enemyShipRef = useRef(null);
-
-            // Initialize sound on first interaction
-            useEffect(() => {
-                const handleFirstInteraction = () => {
-                    window.SoundSystem.unlock();
-                    if (!soundEnabled) {
-                        window.SoundSystem.setMuted(true);
-                    }
-                    document.removeEventListener('click', handleFirstInteraction);
-                    document.removeEventListener('touchstart', handleFirstInteraction);
-                };
-                
-                document.addEventListener('click', handleFirstInteraction);
-                document.addEventListener('touchstart', handleFirstInteraction);
-                
-                return () => {
-                    document.removeEventListener('click', handleFirstInteraction);
-                    document.removeEventListener('touchstart', handleFirstInteraction);
-                };
-            }, []);
-
-            const getTotalPower = useCallback(() => {
-                let power = 0;
-                if (equipped.hull) power += equipped.hull.power;
-                if (equipped.sails) power += equipped.sails.power;
-                if (equipped.cannons) power += equipped.cannons.power;
-                return power;
-            }, [equipped]);
-
-            // Save game whenever state changes
-            useEffect(() => {
-                saveGame({
-                    gems, loot, tasks, streak, lastPlayDate, avatar, inventory,
-                    currentShip, ownedShips, equipped, lootInventory, figureheads,
-                    battlesSinceRare, soundEnabled, autoBattle, shipStats,
-                    parentPassword, savedChores, pendingApproval,
-                    gameState: { level: gameState.level }
-                }, (errorMsg) => {
-                    setSaveError(errorMsg);
-                    // Auto-clear error after 5 seconds
-                    setTimeout(() => setSaveError(null), 5000);
-                });
-            }, [gems, loot, tasks, streak, avatar, inventory, currentShip, ownedShips, equipped, lootInventory, figureheads, battlesSinceRare, gameState.level, soundEnabled, autoBattle, shipStats, parentPassword, savedChores, pendingApproval]);
-
-            // Daily reset
-            useEffect(() => {
-                const today = new Date().toDateString();
-                if (lastPlayDate && lastPlayDate !== today) {
-                    // Reset daily and multiple tasks, remove completed one-time tasks
-                    setTasks(prevTasks => prevTasks.filter(task => {
-                        // Remove completed one-time tasks
-                        if (task.repeatType === 'once' && task.completed) return false;
-                        return true;
-                    }).map(task => {
-                        // Reset daily and multiple tasks
-                        if (task.repeatType === 'daily' || task.repeatType === 'multiple') {
-                            return { ...task, completed: false };
-                        }
-                        return task;
-                    }));
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    if (lastPlayDate === yesterday.toDateString()) {
-                        setStreak(s => s + 1);
-                        window.SoundSystem.streakBonus();
-                    } else {
-                        setStreak(0);
-                    }
-                }
-                setLastPlayDate(today);
-            }, [lastPlayDate]);
-
-            // ============ SOUND TOGGLE ============
-
-            const toggleSound = () => {
-                const newMuted = window.SoundSystem.toggleMute();
-                setSoundEnabled(!newMuted);
-                if (!newMuted) {
-                    window.SoundSystem.buttonClick();
-                }
-            };
-
-            // ============ REAL-TIME BATTLE HELPERS ============
-
-            const getPlayerCooldown = useCallback(() => {
-                const shipIndex = SHIP_PROGRESSION.findIndex(s => s.id === currentShip);
-                const shipBonus = shipIndex * 5; // 5% reduction per ship tier
-                const crewBonus = shipStats.crew.base + (shipStats.crew.level - 1) * shipStats.crew.perLevel;
-                const totalReduction = (shipBonus + crewBonus) / 100;
-                return Math.max(gameState.baseCooldown * (1 - totalReduction), 0.8);
-            }, [currentShip, gameState.baseCooldown, shipStats.crew]);
-
-            // ============ REAL-TIME GAME LOOP ============
-
-            useEffect(() => {
-                if (gameState.battlePhase !== BATTLE_PHASES.FIGHTING) {
-                    lastTimeRef.current = 0;
-                    return;
-                }
-
-                const runGameLoop = (currentTime) => {
-                    if (!lastTimeRef.current) lastTimeRef.current = currentTime;
-                    const delta = (currentTime - lastTimeRef.current) / 1000;
-                    lastTimeRef.current = currentTime;
-
-                    setGameState(prev => {
-                        if (prev.battlePhase !== BATTLE_PHASES.FIGHTING) return prev;
-
-                        let newPlayerCooldown = Math.max(0, prev.playerCooldown - delta);
-                        let newEnemyCooldown = Math.max(0, prev.enemyCooldown - delta);
-                        let newPlayerHealth = prev.player.health;
-                        let newEnemyHealth = prev.enemy.health;
-                        let newCombatLog = [...prev.combatLog];
-
-                        // Enemy AI action when cooldown is ready
-                        if (newEnemyCooldown <= 0 && prev.enemy.health > 0 && prev.player.health > 0) {
-                            const healthPct = prev.enemy.health / prev.enemy.maxHealth;
-
-                            if (healthPct < prev.enemy.repairThreshold && prev.enemy.health < prev.enemy.maxHealth) {
-                                // Enemy repairs
-                                const healAmount = Math.min(10 + Math.floor(prev.level / 2) * 5, prev.enemy.maxHealth - prev.enemy.health);
-                                newEnemyHealth = prev.enemy.health + healAmount;
-                                newCombatLog = [`🔧 Enemy repairs! <span class="log-heal">+${healAmount}</span> HP!`, ...newCombatLog].slice(0, 10);
-                                window.SoundSystem.shipRepair();
-                            } else {
-                                // Enemy attacks
-                                const damage = prev.enemy.damage + Math.random() * 3;
-                                newPlayerHealth = Math.max(0, prev.player.health - damage);
-                                newCombatLog = [`💥 Enemy fires! <span class="log-damage">-${Math.floor(damage)}</span> damage!`, ...newCombatLog].slice(0, 10);
-                                window.SoundSystem.cannonFire();
-                                setTimeout(() => window.SoundSystem.shipHit(), 200);
-
-                                // Animate player damage
-                                if (playerShipRef.current) {
-                                    playerShipRef.current.classList.add('damaged');
-                                    setTimeout(() => {
-                                        if (playerShipRef.current) playerShipRef.current.classList.remove('damaged');
-                                    }, 300);
-                                }
-                                showDamageNumber('player', damage);
-                            }
-                            newEnemyCooldown = prev.enemy.fireCooldown;
-                        }
-
-                        // Check for defeat
-                        if (newPlayerHealth <= 0 && prev.player.health > 0) {
-                            setTimeout(() => {
-                                window.SoundSystem.defeat();
-                            }, 500);
-                            return {
-                                ...prev,
-                                battlePhase: BATTLE_PHASES.DEFEAT,
-                                player: { ...prev.player, health: 0 },
-                                enemy: { ...prev.enemy, health: newEnemyHealth },
-                                playerCooldown: newPlayerCooldown,
-                                enemyCooldown: newEnemyCooldown,
-                                combatLog: newCombatLog
-                            };
-                        }
-
-                        return {
-                            ...prev,
-                            player: { ...prev.player, health: newPlayerHealth },
-                            enemy: { ...prev.enemy, health: newEnemyHealth },
-                            playerCooldown: newPlayerCooldown,
-                            enemyCooldown: newEnemyCooldown,
-                            combatLog: newCombatLog
-                        };
-                    });
-
-                    // Auto-battle logic
-                    if (autoBattle) {
-                        setGameState(prev => {
-                            if (prev.battlePhase !== BATTLE_PHASES.FIGHTING || prev.playerCooldown > 0) return prev;
-
-                            const playerHealthPct = prev.player.health / prev.player.maxHealth;
-                            if (playerHealthPct < 0.5 && prev.player.health < prev.player.maxHealth) {
-                                // Auto repair when low
-                                setTimeout(() => playerRepair(), 0);
-                            } else {
-                                // Auto attack
-                                setTimeout(() => playerAttack(), 0);
-                            }
-                            return prev;
-                        });
-                    }
-
-                    gameLoopRef.current = requestAnimationFrame(runGameLoop);
-                };
-
-                gameLoopRef.current = requestAnimationFrame(runGameLoop);
-
-                return () => {
-                    if (gameLoopRef.current) {
-                        cancelAnimationFrame(gameLoopRef.current);
-                    }
-                };
-            }, [gameState.battlePhase, autoBattle]);
-
-            // ============ TASK HANDLERS ============
-
-            const toggleTask = (id) => {
-                const task = tasks.find(t => t.id === id);
-                // For 'multiple' type tasks, allow completion even if already completed today
-                if (!task || (task.completed && task.repeatType !== 'multiple')) return;
-
-                // Mark task as completed but add to pending approval
-                const streakBonus = Math.floor(streak / 5);
-                const totalPoints = task.points + streakBonus;
-
-                // Add to pending approval queue with unique ID for this completion
-                setPendingApproval(prev => [...prev, {
-                    ...task,
-                    approvalId: `${task.id}-${Date.now()}`,
-                    totalPoints,
-                    streakBonus,
-                    completedAt: new Date().toISOString()
-                }]);
-
-                // For 'multiple' type, don't mark as completed so it can be done again
-                // For 'once' and 'daily', mark as completed
-                if (task.repeatType !== 'multiple') {
-                    setTasks(tasks.map(t =>
-                        t.id === id ? { ...t, completed: true, pendingApproval: true } : t
-                    ));
-                }
-
-                window.SoundSystem.buttonClick();
-            };
-
-            // ============ CHORE MANAGEMENT HANDLERS ============
-
-            const CHORE_ICONS = ['📋', '🧹', '🍽️', '🛏️', '🐕', '🐱', '🧺', '📚', '🎹', '🌱', '🗑️', '🚿', '🦷', '👕', '🧸', '✏️'];
-
-            // Pattern lock helper functions
-            const getDotCenter = (dotIndex) => {
-                const dot = dotRefs.current[dotIndex];
-                const grid = patternGridRef.current;
-                if (!dot || !grid) return null;
-
-                const dotRect = dot.getBoundingClientRect();
-                const gridRect = grid.getBoundingClientRect();
-
-                return {
-                    x: dotRect.left + dotRect.width / 2 - gridRect.left,
-                    y: dotRect.top + dotRect.height / 2 - gridRect.top
-                };
-            };
-
-            const getPatternPath = (pattern, currentPt = null) => {
-                if (pattern.length === 0) return '';
-
-                const points = pattern.map(idx => getDotCenter(idx)).filter(Boolean);
-                if (points.length === 0) return '';
-
-                let path = `M ${points[0].x} ${points[0].y}`;
-                for (let i = 1; i < points.length; i++) {
-                    path += ` L ${points[i].x} ${points[i].y}`;
-                }
-
-                if (currentPt && points.length > 0) {
-                    path += ` L ${currentPt.x} ${currentPt.y}`;
-                }
-
-                return path;
-            };
-
-            const verifyPattern = (input) => {
-                if (!parentPassword || !Array.isArray(parentPassword)) return false;
-                if (input.length !== parentPassword.length) return false;
-                return input.every((dot, idx) => dot === parentPassword[idx]);
-            };
-
-            const handlePatternStart = (dotIndex, e) => {
-                e.preventDefault();
-                setIsDrawingPattern(true);
-                setPatternInput([dotIndex]);
-                setPasswordError(false);
-                setPasswordSuccess(false);
-                window.SoundSystem.buttonClick();
-            };
-
-            const handlePatternMove = (e) => {
-                if (!isDrawingPattern || !patternGridRef.current) return;
-
-                const grid = patternGridRef.current;
-                const gridRect = grid.getBoundingClientRect();
-
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-                setCurrentPoint({
-                    x: clientX - gridRect.left,
-                    y: clientY - gridRect.top
-                });
-
-                // Check if we're over a new dot
-                dotRefs.current.forEach((dot, idx) => {
-                    if (!dot || patternInput.includes(idx)) return;
-
-                    const dotRect = dot.getBoundingClientRect();
-                    const dotCenterX = dotRect.left + dotRect.width / 2;
-                    const dotCenterY = dotRect.top + dotRect.height / 2;
-                    const distance = Math.sqrt(
-                        Math.pow(clientX - dotCenterX, 2) +
-                        Math.pow(clientY - dotCenterY, 2)
-                    );
-
-                    if (distance < 35) {
-                        setPatternInput(prev => [...prev, idx]);
-                        window.SoundSystem.buttonClick();
-                    }
-                });
-            };
-
-            const handlePatternEnd = () => {
-                if (!isDrawingPattern) return;
-
-                setIsDrawingPattern(false);
-                setCurrentPoint(null);
-
-                if (patternInput.length < 4) {
-                    // Pattern too short
-                    setPatternInput([]);
-                    return;
-                }
-
-                if (showPasswordSetup) {
-                    // Setting up new password
-                    setParentPassword([...patternInput]);
-                    setPasswordSuccess(true);
-                    window.SoundSystem.taskComplete();
-
-                    setTimeout(() => {
-                        setShowPasswordSetup(false);
-                        setPatternInput([]);
-                        setPasswordSuccess(false);
-                        if (pendingPasswordAction) {
-                            pendingPasswordAction();
-                            setPendingPasswordAction(null);
-                        }
-                    }, 600);
-                } else {
-                    // Verifying password
-                    if (verifyPattern(patternInput)) {
-                        setPasswordSuccess(true);
-                        window.SoundSystem.taskComplete();
-
-                        setTimeout(() => {
-                            setShowPasswordEntry(false);
-                            setPatternInput([]);
-                            setPasswordSuccess(false);
-                            if (pendingPasswordAction) {
-                                pendingPasswordAction();
-                                setPendingPasswordAction(null);
-                            }
-                        }, 600);
-                    } else {
-                        setPasswordError(true);
-                        window.SoundSystem.defeat();
-
-                        setTimeout(() => {
-                            setPatternInput([]);
-                            setPasswordError(false);
-                        }, 800);
-                    }
-                }
-            };
-
-            const clearPatternInput = () => {
-                setPatternInput([]);
-                setPasswordError(false);
-                setPasswordSuccess(false);
-            };
-
-            const requestParentAccess = (action) => {
-                setPendingPasswordAction(() => action);
-                setPatternInput([]);
-                setPasswordError(false);
-                setPasswordSuccess(false);
-                if (!parentPassword) {
-                    setShowPasswordSetup(true);
-                } else {
-                    setShowPasswordEntry(true);
-                }
-            };
-
-            const openChoreManagement = () => {
-                requestParentAccess(() => setShowChoreManagement(true));
-            };
-
-            const openParentReview = () => {
-                requestParentAccess(() => {
-                    setReviewDecisions({});
-                    setShowParentReview(true);
-                });
-            };
-
-            const addNewChore = () => {
-                const newChore = {
-                    id: Date.now(),
-                    name: choreForm.name.trim(),
-                    icon: choreForm.icon,
-                    points: parseInt(choreForm.points) || 5,
-                    repeatType: choreForm.repeatType,
-                    completed: false
-                };
-
-                if (!newChore.name) return;
-
-                setTasks(prev => [...prev, newChore]);
-                setChoreForm({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
-                setShowChoreEditor(false);
-                window.SoundSystem.buttonClick();
-            };
-
-            const updateChore = () => {
-                if (!editingChore) return;
-
-                setTasks(prev => prev.map(task =>
-                    task.id === editingChore.id ? {
-                        ...task,
-                        name: choreForm.name.trim() || task.name,
-                        icon: choreForm.icon,
-                        points: parseInt(choreForm.points) || task.points,
-                        repeatType: choreForm.repeatType
-                    } : task
-                ));
-
-                setEditingChore(null);
-                setShowChoreEditor(false);
-                setChoreForm({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
-                window.SoundSystem.buttonClick();
-            };
-
-            const deleteChore = (choreId) => {
-                setTasks(prev => prev.filter(t => t.id !== choreId));
-                // Also remove from pending approval if there
-                setPendingApproval(prev => prev.filter(t => t.id !== choreId));
-                window.SoundSystem.buttonClick();
-            };
-
-            const saveChoreForLater = (choreId) => {
-                const chore = tasks.find(t => t.id === choreId);
-                if (!chore) return;
-
-                setSavedChores(prev => [...prev, { ...chore, completed: false }]);
-                setTasks(prev => prev.filter(t => t.id !== choreId));
-                window.SoundSystem.buttonClick();
-            };
-
-            const restoreChore = (choreId) => {
-                const chore = savedChores.find(c => c.id === choreId);
-                if (!chore) return;
-
-                setTasks(prev => [...prev, { ...chore, completed: false }]);
-                setSavedChores(prev => prev.filter(c => c.id !== choreId));
-                window.SoundSystem.buttonClick();
-            };
-
-            const openChoreEditor = (chore = null) => {
-                if (chore) {
-                    setEditingChore(chore);
-                    setChoreForm({
-                        name: chore.name,
-                        icon: chore.icon,
-                        points: chore.points,
-                        repeatType: chore.repeatType || 'daily'
-                    });
-                } else {
-                    setEditingChore(null);
-                    setChoreForm({ name: '', icon: '📋', points: 5, repeatType: 'daily' });
-                }
-                setShowChoreEditor(true);
-            };
-
-            const setReviewDecision = (choreId, decision) => {
-                setReviewDecisions(prev => ({ ...prev, [choreId]: decision }));
-            };
-
-            const submitReviews = () => {
-                let gemsAwarded = 0;
-
-                // Use approvalId for unique identification (supports multiple completions)
-                pendingApproval.forEach(chore => {
-                    const key = chore.approvalId || chore.id;
-                    const decision = reviewDecisions[key];
-                    if (decision === 'pass') {
-                        gemsAwarded += chore.totalPoints;
-                    }
-                });
-
-                // Award gems
-                if (gemsAwarded > 0) {
-                    setGems(g => g + gemsAwarded);
-                    setCelebration(true);
-                    window.SoundSystem.taskComplete();
-                    setTimeout(() => setCelebration(false), 500);
-                }
-
-                // Get all reviewed keys
-                const reviewedKeys = Object.keys(reviewDecisions);
-
-                // Update tasks - mark reviewed ones as no longer pending
-                // For 'multiple' type tasks, we don't mark as completed
-                const reviewedTaskIds = new Set(
-                    pendingApproval
-                        .filter(p => reviewedKeys.includes(p.approvalId || String(p.id)))
-                        .map(p => p.id)
-                );
-
-                setTasks(prev => prev.map(task => {
-                    if (reviewedTaskIds.has(task.id) && task.repeatType !== 'multiple') {
-                        const key = pendingApproval.find(p => p.id === task.id)?.approvalId || task.id;
-                        const decision = reviewDecisions[key];
-                        if (decision === 'fail') {
-                            // Failed - reset to incomplete so child can redo
-                            return { ...task, completed: false, pendingApproval: false };
-                        }
-                        // Passed - mark as fully completed
-                        return { ...task, pendingApproval: false };
-                    }
-                    return task;
-                }));
-
-                // Remove reviewed items from pending approval using approvalId
-                setPendingApproval(prev => prev.filter(p => {
-                    const key = p.approvalId || String(p.id);
-                    return !reviewedKeys.includes(key);
-                }));
-
-                setShowParentReview(false);
-                setReviewDecisions({});
-            };
-
-            const hasPendingChores = pendingApproval.length > 0;
-
-            // ============ SHOP HANDLERS ============
-            
-            const buyItem = (item) => {
-                if (gems >= item.price && !inventory.includes(item.id)) {
-                    setGems(g => g - item.price);
-                    setInventory([...inventory, item.id]);
-                    window.SoundSystem.purchase();
-                    if (item.type === 'skin') setAvatar({ ...avatar, skin: item.id });
-                    if (item.type === 'outfit') setAvatar({ ...avatar, outfit: item.id });
-                    if (item.type === 'accessory') setAvatar({ ...avatar, accessory: item.id });
-                }
-            };
-
-            const equipItem = (itemId, type) => {
-                if (inventory.includes(itemId)) {
-                    setAvatar({ ...avatar, [type]: itemId });
-                    window.SoundSystem.buttonClick();
-                }
-            };
-
-            // ============ SHIP HANDLERS ============
-
-            const buyShip = (ship) => {
-                if (gems >= ship.cost && !ownedShips.includes(ship.id)) {
-                    setGems(g => g - ship.cost);
-                    setOwnedShips([...ownedShips, ship.id]);
-                    setCurrentShip(ship.id);
-                    setUnlockedShip(ship);
-                    setShowShipUnlock(true);
-                    window.SoundSystem.shipUnlock();
-                    createConfetti();
-                }
-            };
-
-            const selectShip = (shipId) => {
-                // Block ship changes during active battle
-                if (gameState.battlePhase === BATTLE_PHASES.FIGHTING) {
-                    return;
-                }
-                if (ownedShips.includes(shipId)) {
-                    setCurrentShip(shipId);
-                    window.SoundSystem.buttonClick();
-                }
-            };
-
-            const equipLoot = (lootItem) => {
-                setEquipped(prev => ({ ...prev, [lootItem.type]: lootItem }));
-                window.SoundSystem.buttonClick();
-            };
-
-            const equipFigurehead = (figurehead) => {
-                setEquipped(prev => ({ ...prev, figurehead: figurehead }));
-                window.SoundSystem.buttonClick();
-            };
-
-            // ============ BATTLE HANDLERS ============
-
-            const addLog = (message) => {
-                setGameState(prev => ({
-                    ...prev,
-                    combatLog: [message, ...prev.combatLog].slice(0, 10)
-                }));
-            };
-
-            // Safe log renderer - parses log strings and renders without dangerouslySetInnerHTML
-            const renderLogEntry = (log) => {
-                // Simple approach: split by span tags and reconstruct
-                if (!log.includes('<span')) {
-                    return log;
-                }
-                
-                // Replace span tags with markers, then split
-                const processed = log
-                    .replace(/<span class="log-damage">([^<]+)<\/span>/g, '|||DAMAGE:$1|||')
-                    .replace(/<span class="log-heal">([^<]+)<\/span>/g, '|||HEAL:$1|||');
-                
-                const parts = processed.split('|||').filter(p => p);
-                
-                return parts.map((part, idx) => {
-                    if (part.startsWith('DAMAGE:')) {
-                        return <span key={idx} className="log-damage">{part.slice(7)}</span>;
-                    } else if (part.startsWith('HEAL:')) {
-                        return <span key={idx} className="log-heal">{part.slice(5)}</span>;
-                    }
-                    return <span key={idx}>{part}</span>;
-                });
-            };
-
-            const showDamageNumber = (target, damage, isHeal = false) => {
-                const shipElement = target === 'player' ? playerShipRef.current : enemyShipRef.current;
-                if (!shipElement) return;
-
-                const damageNum = document.createElement('div');
-                damageNum.className = 'damage-number';
-                damageNum.textContent = isHeal ? `+${Math.floor(damage)}` : `-${Math.floor(damage)}`;
-                if (isHeal) {
-                    damageNum.style.color = '#51cf66';
-                }
-                
-                const rect = shipElement.getBoundingClientRect();
-                // Constrain to viewport to prevent off-screen numbers
-                const left = Math.max(10, Math.min(window.innerWidth - 70, rect.left + rect.width / 2 - 30));
-                const top = Math.max(10, rect.top + 50);
-                damageNum.style.left = `${left}px`;
-                damageNum.style.top = `${top}px`;
-                
-                document.body.appendChild(damageNum);
-                
-                // Use animation end event with fallback timeout for cleanup
-                const cleanup = () => damageNum.remove();
-                damageNum.addEventListener('animationend', cleanup, { once: true });
-                setTimeout(cleanup, 1500); // Fallback cleanup
-            };
-
-            const startBattle = (overrideLevel = null) => {
-                const level = overrideLevel !== null ? overrideLevel : gameState.level;
-                const isBoss = level % 10 === 0 && BOSS_BATTLES[level];
-                const bossData = isBoss ? BOSS_BATTLES[level] : null;
-                
-                const currentShipData = SHIP_PROGRESSION.find(s => s.id === currentShip);
-                const shipIndex = SHIP_PROGRESSION.findIndex(s => s.id === currentShip);
-                
-                // Get upgrade-based stats
-                const upgradeStats = getComputedStats();
-
-                // Combine ship tier bonuses with upgrade bonuses
-                const baseDamage = upgradeStats.damage + (shipIndex * 5) + getTotalPower();
-                const baseHealth = upgradeStats.maxHealth + (shipIndex * 25);
-                const baseRepair = upgradeStats.repairAmount + (shipIndex * 5);
-                
-                const scaleFactor = 1 + (level * 0.3);
-                const bossMultiplier = isBoss ? bossData.healthMultiplier : 1;
-                
-                if (isBoss) {
-                    setShowBossIntro(true);
-                    window.SoundSystem.bossAppear();
-                    setTimeout(() => {
-                        setShowBossIntro(false);
-                        actuallyStartBattle();
-                    }, 2500);
-                } else {
-                    window.SoundSystem.enemyApproach();
-                    actuallyStartBattle();
-                }
-
-                function actuallyStartBattle() {
-                    setGameState(prev => ({
-                        ...prev,
-                        level: level,
-                        battlePhase: BATTLE_PHASES.FIGHTING,
-                        isBoss,
-                        playerCooldown: 0,
-                        enemyCooldown: (isBoss ? 4.0 : Math.max(3.5 - level * 0.03, 2.5)) * 0.5,
-                        bossData,
-                        player: {
-                            maxHealth: baseHealth,
-                            health: baseHealth,
-                            cannons: 1 + shipIndex,
-                            crew: 5 + shipIndex * 2,
-                            size: currentShipData?.size || 'tiny',
-                            damage: baseDamage,
-                            repairAmount: baseRepair
-                        },
-                        enemy: {
-                            maxHealth: Math.floor(50 * scaleFactor * bossMultiplier),
-                            health: Math.floor(50 * scaleFactor * bossMultiplier),
-                            cannons: Math.floor(1 + level / 3),
-                            crew: Math.floor(3 + level / 2),
-                            size: level > 8 ? 'Legendary' : level > 6 ? 'Massive' : level > 4 ? 'Large' : level > 2 ? 'Medium' : 'Small',
-                            damage: Math.floor(10 * scaleFactor * (isBoss ? 1.5 : 1)),
-                            fireCooldown: isBoss ? 4.0 : Math.max(3.5 - level * 0.03, 2.5),
-                            repairThreshold: 0.4
-                        },
-                        combatLog: [isBoss ? `âš ️ BOSS BATTLE: ${bossData.name} approaches!` : '⚔️ Battle begins! Prepare for combat!']
-                    }));
-                }
-            };
-
-            const playerAttack = () => {
-                // Prevent multi-click bug: check both state and ref
-                if (gameState.battlePhase !== BATTLE_PHASES.FIGHTING || gameState.playerCooldown > 0 || actionInProgressRef.current) return;
-
-                // Lock attack immediately with ref (synchronous)
-                actionInProgressRef.current = true;
-
-                setGameState(prev => ({ ...prev, playerCooldown: getPlayerCooldown() }));
-                window.SoundSystem.cannonFire();
-
-                if (playerShipRef.current) {
-                    playerShipRef.current.classList.add('attacking');
-                    setTimeout(() => {
-                        if (playerShipRef.current) playerShipRef.current.classList.remove('attacking');
-                    }, 600);
-                }
-
-                setTimeout(() => {
-                    setGameState(prev => {
-                        // Calculate damage inside setGameState to use current state
-                        const damage = prev.player.damage + Math.random() * 10;
-                        showDamageNumber('enemy', damage);
-                        window.SoundSystem.shipHit();
-                        addLog(`⚔️ You fire your cannons! <span class="log-damage">-${Math.floor(damage)} damage</span>!`);
-
-                        const newHealth = prev.enemy.health - damage;
-
-                        if (newHealth <= 0) {
-                            setTimeout(() => handleVictory(), 500);
-                            return {
-                                ...prev,
-                                enemy: { ...prev.enemy, health: 0 }
-                                // Keep battlePhase as FIGHTING until loot is revealed
-                            };
-                        }
-
-                        return {
-                            ...prev,
-                            enemy: { ...prev.enemy, health: newHealth }
-                        };
-                    });
-
-                    // Release attack lock after damage is applied
-                    actionInProgressRef.current = false;
-                }, 600);
-            };
-
-            // Enemy attacks are now handled by the real-time game loop
-
-            const playerRepair = () => {
-                // Prevent spam clicking: check both state and ref
-                if (gameState.battlePhase !== BATTLE_PHASES.FIGHTING || gameState.playerCooldown > 0 || actionInProgressRef.current) return;
-                if (gameState.player.health >= gameState.player.maxHealth) return;
-
-                // Lock action immediately
-                actionInProgressRef.current = true;
-
-                window.SoundSystem.shipRepair();
-
-                // Single setGameState call with all updates and fresh state calculations
-                setGameState(prev => {
-                    const healAmount = Math.min(
-                        prev.player.repairAmount,
-                        prev.player.maxHealth - prev.player.health
-                    );
-
-                    showDamageNumber('player', healAmount, true);
-                    addLog(`🔧 Repaired! <span class="log-heal">+${Math.floor(healAmount)}</span> HP!`);
-
-                    return {
-                        ...prev,
-                        playerCooldown: getPlayerCooldown(),
-                        player: {
-                            ...prev.player,
-                            health: Math.min(prev.player.health + healAmount, prev.player.maxHealth)
-                        }
-                    };
-                });
-
-                // Release action lock
-                actionInProgressRef.current = false;
-            };
-
-            const handleVictory = () => {
-                // Calculate and award loot currency directly (no loot items or popup)
-                if (gameState.isBoss && gameState.bossData) {
-                    const gemReward = gameState.level * 5 + 10;
-                    setGems(g => g + gemReward);
-                    window.SoundSystem.bossDefeated();
-
-                    // Award figurehead from boss
-                    const figurehead = gameState.bossData.figurehead;
-                    if (!figureheads.find(f => f.id === figurehead.id)) {
-                        setFigureheads(prev => [...prev, figurehead]);
-                        setUnlockedFigurehead(figurehead);
-                        setTimeout(() => {
-                            setShowFigureheadUnlock(true);
-                            window.SoundSystem.figureheadUnlock();
-                            createConfetti();
-                        }, 1000);
-                    }
-                } else {
-                    // Award loot currency for regular battles
-                    const lootReward = gameState.level * 3 + 5;
-                    setLoot(l => l + lootReward);
-                    window.SoundSystem.victory();
-                }
-
-                // Go directly to victory phase (inline display, no popup)
-                setGameState(prev => ({ ...prev, battlePhase: BATTLE_PHASES.VICTORY }));
-            };
-
-            const closeLootReveal = () => {
-                setShowLootReveal(false);
-                setGameState(prev => ({ ...prev, battlePhase: BATTLE_PHASES.VICTORY }));
-                window.SoundSystem.buttonClick();
-            };
-
-            const nextLevel = () => {
-                const newLevel = gameState.level + 1;
-                window.SoundSystem.levelUp();
-                startBattle(newLevel);
-            };
-
-            const restartBattle = () => {
-                window.SoundSystem.buttonClick();
-                
-                // If boss fight lost, go back to start of the 10-level block
-                if (gameState.isBoss) {
-                    const blockStart = getBlockStart(gameState.level);
-                    setTimeout(() => startBattle(blockStart), 100);
-                } else {
-                    setTimeout(() => startBattle(gameState.level), 100);
-                }
-            };
-
-            const handleViewChange = (view) => {
-                setCurrentView(view);
-                window.SoundSystem.tabSwitch();
-            };
-
-            // ============ COMPONENTS ============
-            
-            const GemIcon = ({ size = "w-8 h-8" }) => (
-                <div className={`${size} relative inline-flex items-center justify-center`}>
-                    <span className="text-2xl">💎</span>
+        },
+        soundSystem
+    });
+
+    // UI State
+    const [activeTab, setActiveTab] = useState('chores'); // 'chores', 'jobs', 'history'
+    const [showUserSelector, setShowUserSelector] = useState(false);
+    const [showUserEditor, setShowUserEditor] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
+    const [showJobEditor, setShowJobEditor] = useState(false);
+    const [editingJob, setEditingJob] = useState(null);
+    const [showChoreEditor, setShowChoreEditor] = useState(false);
+    const [editingChore, setEditingChore] = useState(null);
+    const [showParentReview, setShowParentReview] = useState(false);
+
+    // Request parent access
+    const requireParentAccess = (action) => {
+        setPendingAction(() => action);
+        patternLock.requestAccess();
+    };
+
+    // Get current user's data
+    const activeUser = economy.activeUser;
+    const userChores = economy.getUserChores(economy.activeUserId);
+    const userJobs = economy.getUserJobs(economy.activeUserId);
+    const userTransactions = economy.getUserTransactions(economy.activeUserId);
+
+    // Handle chore completion
+    const handleCompleteChore = (choreId) => {
+        const result = economy.completeChore(choreId);
+        if (result?.requiresApproval) {
+            // Will go to parent review
+        }
+    };
+
+    // Handle job completion
+    const handleCompleteJob = (jobId, count = 1) => {
+        const result = economy.completeJob(jobId, count);
+        if (result?.success && result?.earned) {
+            showEarning(result.earned, result.jobTitle);
+        }
+    };
+
+    // Calculate pending approvals count
+    const pendingApprovalsCount = economy.getPendingApprovals().length;
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
+            {/* Header */}
+            <header className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+                <div className="max-w-lg mx-auto px-4 py-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setShowUserSelector(true)}
+                                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-full px-3 py-2 transition-all"
+                            >
+                                <span className="text-2xl">{activeUser?.avatar || '👤'}</span>
+                                <span className="text-white font-semibold">{activeUser?.name || 'Select User'}</span>
+                                <span className="text-white/60">▼</span>
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            {/* Balance Display */}
+                            <div className="text-right">
+                                <div className="text-white/60 text-xs">Balance</div>
+                                <div className="text-white font-bold text-xl">
+                                    {formatCents(activeUser?.balance || 0)}
+                                </div>
+                                {(activeUser?.pendingBalance || 0) > 0 && (
+                                    <div className="text-yellow-300 text-xs">
+                                        +{formatCents(activeUser.pendingBalance)} pending
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Sound Toggle */}
+                            <button
+                                onClick={() => setSoundEnabled(!soundEnabled)}
+                                className="text-2xl opacity-80 hover:opacity-100"
+                            >
+                                {soundEnabled ? '🔊' : '🔇'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Streak Display */}
+                    {activeUser?.streak > 0 && (
+                        <div className="mt-2 flex items-center justify-center gap-2 text-orange-300">
+                            <span className="text-xl">🔥</span>
+                            <span className="font-bold">{activeUser.streak} Day Streak!</span>
+                        </div>
+                    )}
                 </div>
-            );
+            </header>
 
-            const LootIcon = ({ size = "w-8 h-8" }) => (
-                <div className={`${size} relative inline-flex items-center justify-center`}>
-                    <span className="text-2xl">🪙</span>
+            {/* Navigation Tabs */}
+            <nav className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+                <div className="max-w-lg mx-auto px-4">
+                    <div className="flex">
+                        {[
+                            { id: 'chores', label: '📋 Chores', badge: null },
+                            { id: 'jobs', label: '💼 Jobs', badge: null },
+                            { id: 'history', label: '📊 History', badge: null }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex-1 py-3 text-center font-semibold transition-all relative ${
+                                    activeTab === tab.id
+                                        ? 'text-white border-b-2 border-white'
+                                        : 'text-white/60 hover:text-white/80'
+                                }`}
+                            >
+                                {tab.label}
+                                {tab.badge && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                        {tab.badge}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            );
-            
-            const Avatar = () => {
-                const getSkinEmoji = () => {
-                    const skins = { default: '😊', cool: '😎', happy: '😄', star: '⭐' };
-                    return skins[avatar.skin] || '😊';
-                };
-                
-                const getOutfitColor = () => {
-                    const outfits = { casual: 'bg-blue-400', superhero: 'bg-red-500', wizard: 'bg-purple-600', ninja: 'bg-gray-800' };
-                    return outfits[avatar.outfit] || 'bg-blue-400';
-                };
-                
-                const getAccessoryEmoji = () => {
-                    const accessories = { none: '', crown: '👑', sunglasses: '🕶️', hat: '🎩' };
-                    return accessories[avatar.accessory] || '';
-                };
-                
-                return (
-                    <div className="relative float">
-                        <div className={`w-32 h-40 ${getOutfitColor()} rounded-3xl shadow-lg relative`}>
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-6xl">{getSkinEmoji()}</div>
-                            {avatar.accessory !== 'none' && (
-                                <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 text-4xl">{getAccessoryEmoji()}</div>
+            </nav>
+
+            {/* Main Content */}
+            <main className="max-w-lg mx-auto px-4 py-6">
+                {/* Chores Tab */}
+                {activeTab === 'chores' && (
+                    <div className="space-y-4">
+                        {/* Parent Review Button */}
+                        {pendingApprovalsCount > 0 && (
+                            <button
+                                onClick={() => requireParentAccess(() => setShowParentReview(true))}
+                                className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+                            >
+                                <span>👨‍👩‍👧 Parent Review</span>
+                                <span className="bg-red-500 text-white text-sm rounded-full px-2">
+                                    {pendingApprovalsCount}
+                                </span>
+                            </button>
+                        )}
+
+                        {/* Daily Chores */}
+                        <div>
+                            <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
+                                <span>📅</span> Daily Chores
+                            </h2>
+                            <div className="space-y-2">
+                                {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.DAILY).map(chore => (
+                                    <ChoreCardSimple
+                                        key={chore.id}
+                                        chore={chore}
+                                        onComplete={() => handleCompleteChore(chore.id)}
+                                        onEdit={() => requireParentAccess(() => {
+                                            setEditingChore(chore);
+                                            setShowChoreEditor(true);
+                                        })}
+                                    />
+                                ))}
+                                {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.DAILY).length === 0 && (
+                                    <div className="text-white/60 text-center py-4">No daily chores yet</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Weekly Chores */}
+                        <div>
+                            <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
+                                <span>📆</span> Weekly Chores
+                            </h2>
+                            <div className="space-y-2">
+                                {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.WEEKLY).map(chore => (
+                                    <ChoreCardSimple
+                                        key={chore.id}
+                                        chore={chore}
+                                        onComplete={() => handleCompleteChore(chore.id)}
+                                        onEdit={() => requireParentAccess(() => {
+                                            setEditingChore(chore);
+                                            setShowChoreEditor(true);
+                                        })}
+                                    />
+                                ))}
+                                {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.WEEKLY).length === 0 && (
+                                    <div className="text-white/60 text-center py-4">No weekly chores yet</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Add Chore Button (Parent Only) */}
+                        <button
+                            onClick={() => requireParentAccess(() => {
+                                setEditingChore(null);
+                                setShowChoreEditor(true);
+                            })}
+                            className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
+                        >
+                            <span>➕</span> Add Chore (Parent)
+                        </button>
+                    </div>
+                )}
+
+                {/* Jobs Tab */}
+                {activeTab === 'jobs' && (
+                    <div className="space-y-4">
+                        <div className="bg-white/10 rounded-xl p-4 mb-4">
+                            <p className="text-white/80 text-sm">
+                                💡 Jobs earn real money! Complete your daily chores to unlock jobs.
+                            </p>
+                        </div>
+
+                        {userJobs.map(job => (
+                            <JobCardSimple
+                                key={job.id}
+                                job={job}
+                                chores={userChores}
+                                onComplete={(count) => handleCompleteJob(job.id, count)}
+                                onEdit={() => requireParentAccess(() => {
+                                    setEditingJob(job);
+                                    setShowJobEditor(true);
+                                })}
+                            />
+                        ))}
+
+                        {userJobs.length === 0 && (
+                            <div className="text-white/60 text-center py-8">
+                                No jobs available yet. Parents can add jobs!
+                            </div>
+                        )}
+
+                        {/* Add Job Button (Parent Only) */}
+                        <button
+                            onClick={() => requireParentAccess(() => {
+                                setEditingJob(null);
+                                setShowJobEditor(true);
+                            })}
+                            className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
+                        >
+                            <span>➕</span> Add Job (Parent)
+                        </button>
+                    </div>
+                )}
+
+                {/* History Tab */}
+                {activeTab === 'history' && (
+                    <div className="space-y-4">
+                        {/* Summary Card */}
+                        <div className="bg-white rounded-xl p-4 shadow-lg">
+                            <h3 className="font-bold text-gray-800 mb-3">💰 Balance Summary</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div className="text-gray-500 text-sm">Available</div>
+                                    <div className="text-2xl font-bold text-green-600">
+                                        {formatCents(activeUser?.balance || 0)}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-gray-500 text-sm">Pending</div>
+                                    <div className="text-2xl font-bold text-yellow-600">
+                                        {formatCents(activeUser?.pendingBalance || 0)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Transaction List */}
+                        <div className="bg-white rounded-xl p-4 shadow-lg">
+                            <h3 className="font-bold text-gray-800 mb-3">📜 Recent Transactions</h3>
+                            {userTransactions.length > 0 ? (
+                                <div className="space-y-2">
+                                    {userTransactions.slice(0, 10).map(tx => (
+                                        <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                                            <div>
+                                                <div className="font-medium text-gray-800">{tx.description}</div>
+                                                <div className="text-xs text-gray-500">
+                                                    {new Date(tx.date).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                            <div className={`font-bold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {tx.amount >= 0 ? '+' : ''}{formatCents(tx.amount)}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-gray-500 text-center py-4">
+                                    No transactions yet
+                                </div>
                             )}
                         </div>
                     </div>
-                );
-            };
+                )}
+            </main>
 
-            const PirateShipSVG = ({ isPlayer, size }) => {
-                const sizeClass = `size-${size}`;
-                
-                return (
-                    <svg className={`ship-visual ${sizeClass}`} viewBox="0 0 300 250" xmlns="http://www.w3.org/2000/svg">
-                        <ellipse cx="150" cy="195" rx="80" ry="8" fill={isPlayer ? "rgba(74, 124, 158, 0.3)" : "rgba(139, 0, 0, 0.2)"}/>
-                        <path d="M50 180 L30 150 Q25 130 30 120 L40 90 L260 90 L270 120 Q275 130 270 150 L250 180 Z" fill="rgba(0,0,0,0.3)" transform="translate(3, 5)"/>
-                        <path d="M50 180 L30 150 Q25 130 30 120 L40 90 L260 90 L270 120 Q275 130 270 150 L250 180 Z" fill={isPlayer ? "#3d2817" : "#1a1a1a"} stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="3"/>
-                        <path d="M45 100 Q150 102 255 100" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" opacity="0.5" fill="none"/>
-                        <path d="M42 110 Q150 112 258 110" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" opacity="0.5" fill="none"/>
-                        <path d="M40 120 Q150 122 260 120" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" opacity="0.5" fill="none"/>
-                        <path d="M50 180 L35 155 Q32 140 35 130 L42 100 L80 100 L70 130 L60 160 Z" fill={isPlayer ? "#6b4423" : "#2d2d2d"} opacity="0.6"/>
-                        <rect x="40" y="85" width="220" height="12" fill={isPlayer ? "#6b4423" : "#2d2d2d"} stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="2" rx="2"/>
-                        <rect x="110" y="20" width="8" height="75" fill={isPlayer ? "#6b4423" : "#2d2d2d"} stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="2"/>
-                        <rect x="180" y="30" width="8" height="65" fill={isPlayer ? "#6b4423" : "#2d2d2d"} stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="2"/>
-                        <path className="sail" d="M120 35 L180 35 Q185 60 180 80 L120 80 Q115 60 120 35 Z" fill={isPlayer ? "#f5f5dc" : "#4a0000"} stroke={isPlayer ? "#8b7355" : "#2d0000"} strokeWidth="2"/>
-                        <path className="sail" d="M188 45 L230 45 Q233 60 230 75 L188 75 Q185 60 188 45 Z" fill={isPlayer ? "#f5f5dc" : "#4a0000"} stroke={isPlayer ? "#8b7355" : "#2d0000"} strokeWidth="2"/>
-                        <rect x="108" y="20" width="12" height="8" fill={isPlayer ? "#3d2817" : "#1a1a1a"} stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="1" rx="1"/>
-                        <g className="flag">
-                            <line x1="115" y1="20" x2="115" y2="5" stroke={isPlayer ? "#2a1810" : "#000"} strokeWidth="2"/>
-                            <path d="M115 5 L140 8 Q138 12 140 16 L115 13 Z" fill={isPlayer ? "#1a1a1a" : "#8b0000"}/>
-                            <text x="120" y="14" fontSize="8" fill="#fff" fontWeight="bold">☠</text>
-                        </g>
-                        <line x1="45" y1="90" x2="255" y2="90" stroke={isPlayer ? "#3d2817" : "#1a1a1a"} strokeWidth="3"/>
-                        <circle cx="200" cy="110" r="7" fill={isPlayer ? "#ffd700" : "#ff4500"} opacity="0.8" stroke={isPlayer ? "#8b7355" : "#8b0000"} strokeWidth="1.5"/>
-                        <circle cx="220" cy="115" r="6" fill={isPlayer ? "#ffd700" : "#ff4500"} opacity="0.8" stroke={isPlayer ? "#8b7355" : "#8b0000"} strokeWidth="1.5"/>
-                        <line x1="270" y1="120" x2="290" y2="110" stroke={isPlayer ? "#6b4423" : "#2d2d2d"} strokeWidth="5" strokeLinecap="round"/>
-                    </svg>
-                );
-            };
-            
-            const currentShipData = SHIP_PROGRESSION.find(s => s.id === currentShip);
-            const nextShip = SHIP_PROGRESSION.find(s => !ownedShips.includes(s.id));
-            const progressToNext = nextShip ? (gems / nextShip.cost) * 100 : 100;
-
-            return (
-                <div className={`min-h-screen p-4 ${currentView === 'battle' ? 'battle-view' : currentView === 'collection' ? 'collection-view' : 'chore-view'}`}>
-                    {/* Sound Toggle Button */}
-                    <button 
-                        onClick={toggleSound}
-                        className={`sound-toggle ${!soundEnabled ? 'muted' : ''}`}
-                        title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-                    >
-                        {soundEnabled ? '🔊' : '🔇'}
-                    </button>
-
-                    {/* Save Error Toast */}
-                    {saveError && (
-                        <div className="save-error-toast">
-                            ⚠️ {saveError}
-                        </div>
-                    )}
-
-                    {currentView === 'battle' && (
-                        <div className="ocean-waves">
-                            <div className="wave"></div>
-                            <div className="wave"></div>
-                            <div className="wave"></div>
-                        </div>
-                    )}
-                    
-                    <div className="max-w-6xl mx-auto relative z-10">
-                        {/* Header */}
-                        <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6">
-                            <div className="flex justify-between items-center flex-wrap gap-4">
-                                <h1 className="text-4xl font-bold text-purple-600">🌟 Chore Quest</h1>
-                                <div className="flex items-center gap-4">
-                                    {streak > 0 && (
-                                        <div className="flex items-center gap-1 bg-orange-100 px-3 py-2 rounded-full">
-                                            <span className="text-2xl streak-fire">🔥</span>
-                                            <span className="text-xl font-bold text-orange-600">{streak}</span>
-                                        </div>
-                                    )}
-                                    <div className={`flex items-center gap-2 bg-purple-100 px-4 py-2 rounded-full ${celebration ? 'bounce' : ''}`}>
-                                        <GemIcon size="w-8 h-8" />
-                                        <span className="text-2xl font-bold text-purple-700">{gems}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-yellow-100 px-4 py-2 rounded-full">
-                                        <LootIcon size="w-8 h-8" />
-                                        <span className="text-2xl font-bold text-yellow-700">{loot}</span>
-                                        <span className="text-xs text-yellow-600">loot</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* Navigation */}
-                        <div className="flex gap-2 mb-6 overflow-x-auto">
-                            {['tasks', 'battle', 'collection'].map(view => (
+            {/* User Selector Modal */}
+            {showUserSelector && (
+                <div className="modal-overlay" onClick={() => setShowUserSelector(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-purple-600 mb-4">👥 Select User</h2>
+                        <div className="space-y-2">
+                            {economy.users.map(user => (
                                 <button
-                                    key={view}
-                                    onClick={() => handleViewChange(view)}
-                                    className={`flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-lg transition-all ${
-                                        currentView === view
-                                            ? 'bg-pink-500 text-white shadow-lg scale-105'
-                                            : 'bg-white text-gray-600 hover:bg-pink-100'
+                                    key={user.id}
+                                    onClick={() => {
+                                        economy.switchUser(user.id);
+                                        setShowUserSelector(false);
+                                    }}
+                                    className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all ${
+                                        user.id === economy.activeUserId
+                                            ? 'bg-purple-100 border-2 border-purple-500'
+                                            : 'bg-gray-100 hover:bg-gray-200'
                                     }`}
                                 >
-                                    {view === 'tasks' && '📝'}
-                                    {view === 'battle' && '⚔️'}
-                                    {view === 'collection' && '🎒'}
-                                    <span className="ml-1 capitalize">{view}</span>
+                                    <span className="text-3xl">{user.avatar}</span>
+                                    <div className="text-left flex-1">
+                                        <div className="font-semibold">{user.name}</div>
+                                        <div className="text-sm text-gray-500">{user.role}</div>
+                                    </div>
+                                    <div className="text-green-600 font-bold">{formatCents(user.balance)}</div>
                                 </button>
                             ))}
                         </div>
-                        
-                        {/* Tasks View */}
-                        {currentView === 'tasks' && (
-                            <div className="bg-white rounded-3xl shadow-2xl p-8">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-3xl font-bold text-purple-600">Today's Chores</h2>
-                                    <button
-                                        onClick={openChoreManagement}
-                                        className="px-4 py-2 bg-purple-100 text-purple-700 rounded-xl font-semibold hover:bg-purple-200 transition-all flex items-center gap-2"
-                                    >
-                                        ⚙️ Parent Settings
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {tasks.map(task => {
-                                        const pendingCount = pendingApproval.filter(p => p.id === task.id).length;
-                                        const canClick = task.repeatType === 'multiple' || !task.completed;
-                                        return (
-                                            <div
-                                                key={task.id}
-                                                onClick={() => canClick && toggleTask(task.id)}
-                                                className={`p-6 rounded-2xl cursor-pointer transition-all ${
-                                                    task.completed && task.repeatType !== 'multiple'
-                                                        ? task.pendingApproval
-                                                            ? 'bg-yellow-50 border-4 border-yellow-400'
-                                                            : 'bg-green-100 border-4 border-green-400'
-                                                        : 'bg-gradient-to-r from-purple-100 to-pink-100 border-4 border-purple-300 hover:scale-105 shine'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="text-5xl">{task.icon}</span>
-                                                        <div>
-                                                            <h3 className="text-2xl font-bold text-gray-800">{task.name}</h3>
-                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                                <GemIcon size="w-6 h-6" />
-                                                                <span className="text-lg font-semibold text-purple-700">
-                                                                    +{task.points}{streak > 0 && <span className="text-orange-500"> +{Math.floor(streak/5)} streak</span>}
-                                                                </span>
-                                                                {task.repeatType === 'multiple' && (
-                                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">🔁 Multi</span>
-                                                                )}
-                                                                {task.repeatType === 'once' && (
-                                                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">🔲 Once</span>
-                                                                )}
-                                                                {pendingCount > 0 && (
-                                                                    <span className="approval-badge pending">⏳ {pendingCount} pending</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center ${
-                                                        task.completed && task.repeatType !== 'multiple'
-                                                            ? task.pendingApproval ? 'bg-yellow-400 border-yellow-500' : 'bg-green-500 border-green-600'
-                                                            : pendingCount > 0 ? 'bg-yellow-400 border-yellow-500'
-                                                            : 'bg-white border-purple-300'
-                                                    }`}>
-                                                        {task.completed && task.repeatType !== 'multiple' && task.pendingApproval && <span className="text-2xl">⏳</span>}
-                                                        {task.completed && task.repeatType !== 'multiple' && !task.pendingApproval && <span className="text-3xl text-white">✔</span>}
-                                                        {task.repeatType === 'multiple' && pendingCount > 0 && <span className="text-lg font-bold">{pendingCount}</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {hasPendingChores && (
-                                    <button
-                                        onClick={openParentReview}
-                                        className="request-approval-btn"
-                                    >
-                                        👨‍👩‍👧 Ask Parent to Review ({pendingApproval.length} chore{pendingApproval.length !== 1 ? 's' : ''})
-                                    </button>
-                                )}
-
-                                {tasks.filter(t => t.repeatType !== 'multiple').every(task => task.completed && !task.pendingApproval) && tasks.filter(t => t.repeatType !== 'multiple').length > 0 && pendingApproval.length === 0 && (
-                                    <div className="mt-8 p-6 bg-gradient-to-r from-yellow-200 to-orange-200 rounded-2xl text-center">
-                                        <p className="text-3xl font-bold text-orange-700">🎉 All chores complete! Amazing work! 🎉</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        
-                        {/* Avatar View - hidden for now */}
-                        {/* Store View - hidden for now */}
-
-                        {/* Collection View */}
-                        {currentView === 'collection' && (
-                            <div className="space-y-6">
-                                {/* Ships */}
-                                <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-3xl p-6 border-4 border-blue-500">
-                                    <h2 className="text-3xl font-bold text-white mb-6">🚢 Ships</h2>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {SHIP_PROGRESSION.map(ship => {
-                                            const owned = ownedShips.includes(ship.id);
-                                            const isSelected = currentShip === ship.id;
-                                            const canAfford = gems >= ship.cost;
-                                            
-                                            return (
-                                                <div
-                                                    key={ship.id}
-                                                    onClick={() => owned ? selectShip(ship.id) : canAfford && buyShip(ship)}
-                                                    className={`p-4 rounded-xl text-center cursor-pointer transition-all ${
-                                                        isSelected ? 'bg-yellow-500 scale-105 ring-4 ring-yellow-300'
-                                                        : owned ? 'bg-blue-700 hover:bg-blue-600'
-                                                        : canAfford ? 'bg-gray-700 hover:bg-gray-600'
-                                                        : 'bg-gray-800 opacity-50'
-                                                    }`}
-                                                >
-                                                    <div className="text-4xl mb-2">{owned ? ship.emoji : '❔'}</div>
-                                                    <div className="text-white font-bold text-sm">{ship.name}</div>
-                                                    {!owned && (
-                                                        <div className="flex items-center justify-center gap-1 mt-2">
-                                                            <span className="text-lg">💎</span>
-                                                            <span className="text-yellow-300 font-bold">{ship.cost}</span>
-                                                        </div>
-                                                    )}
-                                                    {isSelected && <div className="text-xs mt-1 text-yellow-200">EQUIPPED</div>}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    {nextShip && (
-                                        <div className="mt-4">
-                                            <div className="text-white text-sm mb-2">Progress to {nextShip.name}: {gems}/{nextShip.cost} 💎</div>
-                                            <div className="progress-bar-container">
-                                                <div className="progress-bar-fill" style={{width: `${Math.min(progressToNext, 100)}%`}}></div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Figureheads section hidden for now */}
-                                {/* Equipment and Loot sections hidden for now */}
-                            </div>
-                        )}
-
-                        {/* Battle View */}
-                        {currentView === 'battle' && (
-                            <div>
-                                <h1 style={{fontFamily: 'Cinzel'}} className="text-5xl font-bold text-center mb-4 text-yellow-400">
-                                    ⚔️ BATTLE ⚔️
-                                </h1>
-                                <div className="text-center text-xl mb-6 text-blue-200">
-                                    Level {gameState.level}
-                                    {gameState.level % 10 === 0 && BOSS_BATTLES[gameState.level] && (
-                                        <span className="ml-2 text-red-400">🔥 BOSS LEVEL!</span>
-                                    )}
-                                </div>
-
-                                {/* Inline Victory State */}
-                                {gameState.battlePhase === BATTLE_PHASES.VICTORY ? (
-                                    <div className="bg-gradient-to-br from-yellow-600 to-orange-600 rounded-3xl p-12 text-center border-8 border-yellow-400 shadow-2xl">
-                                        <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-white mb-4">
-                                            🏆 VICTORY! 🏆
-                                        </h2>
-                                        <p className="text-2xl text-white mb-4">Level {gameState.level} Complete!</p>
-                                        <p className="text-3xl text-yellow-200 mb-8">
-                                            {gameState.isBoss ? (
-                                                <>💎 +{gameState.level * 5 + 10} Gems!</>
-                                            ) : (
-                                                <>🪙 +{gameState.level * 3 + 5} Loot!</>
-                                            )}
-                                        </p>
-                                        <button
-                                            onClick={nextLevel}
-                                            style={{fontFamily: 'Cinzel'}}
-                                            className="px-12 py-4 bg-white text-orange-600 rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
-                                        >
-                                            NEXT LEVEL ⚔️
-                                        </button>
-                                    </div>
-                                ) : gameState.battlePhase === BATTLE_PHASES.DEFEAT ? (
-                                    <div className="bg-gradient-to-br from-red-900 to-black rounded-3xl p-12 text-center border-8 border-red-700 shadow-2xl">
-                                        <h2 style={{fontFamily: 'Cinzel'}} className="text-6xl font-bold text-red-500 mb-4">
-                                            💀 DEFEATED 💀
-                                        </h2>
-                                        {gameState.isBoss ? (
-                                            <>
-                                                <p className="text-xl text-white mb-4">The boss was too strong!</p>
-                                                <p className="text-lg text-gray-300 mb-8">
-                                                    Back to Level {getBlockStart(gameState.level)} to train.
-                                                </p>
-                                            </>
-                                        ) : (
-                                            <p className="text-xl text-gray-300 mb-8">Your ship has been sunk!</p>
-                                        )}
-                                        <button
-                                            onClick={restartBattle}
-                                            style={{fontFamily: 'Cinzel'}}
-                                            className="px-12 py-4 bg-red-600 text-white rounded-xl font-bold text-2xl hover:scale-105 transition-transform shadow-xl"
-                                        >
-                                            {gameState.isBoss ? 'BACK TO TRAINING ⚔️' : 'TRY AGAIN ⚔️'}
-                                        </button>
-                                    </div>
-                                ) : gameState.battlePhase === BATTLE_PHASES.IDLE ? (
-                                    <div className="space-y-6">
-                                        {/* Ship Preview & Start Battle */}
-                                        <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-8 text-center">
-                                            <div className="text-6xl mb-4">{currentShipData?.emoji || '🚣'}</div>
-                                            <div className="text-2xl text-white mb-4">{currentShipData?.name || 'Rusty Raft'}</div>
-                                            <div className="text-yellow-400 mb-6">⚡ Power: {getTotalPower()}</div>
-                                            <button
-                                                onClick={() => startBattle()}
-                                                style={{fontFamily: 'Cinzel'}}
-                                                className="px-12 py-6 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-2xl font-bold text-3xl hover:scale-105 transition-transform shadow-2xl"
-                                            >
-                                                🏴‍☠️ START BATTLE 🏴‍☠️
-                                            </button>
-                                        </div>
-
-                                        {/* Ship Upgrades Section */}
-                                        <div className="bg-opacity-40 bg-gray-900 backdrop-blur rounded-3xl p-6 border-4 border-yellow-600">
-                                            <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-center">🔧 Ship Upgrades</h3>
-                                            <div className="text-center text-yellow-300 mb-4">
-                                                🪙 Loot Available: <span className="font-bold text-2xl">{loot}</span>
-                                            </div>
-
-                                            {/* Stats Summary */}
-                                            <div className="stats-summary mb-4">
-                                                <div className="stats-grid">
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">💥 Damage</span>
-                                                        <span className="stat-value">{getComputedStats().damage}</span>
-                                                    </div>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">⚡ Cooldown</span>
-                                                        <span className="stat-value">-{getComputedStats().cooldownReduction}%</span>
-                                                    </div>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">❤️ Max HP</span>
-                                                        <span className="stat-value">{getComputedStats().maxHealth}</span>
-                                                    </div>
-                                                    <div className="stat-item">
-                                                        <span className="stat-label">🔧 Repair</span>
-                                                        <span className="stat-value">{getComputedStats().repairAmount}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Upgrade Cards */}
-                                            <div className="upgrades-container">
-                                                {[
-                                                    { key: 'firepower', name: '💥 Firepower', desc: 'Damage per shot', unit: ' dmg' },
-                                                    { key: 'crew', name: '⚡ Crew', desc: 'Cooldown reduction', unit: '%' },
-                                                    { key: 'hull', name: '🛡️ Hull', desc: 'Max health', unit: ' HP' },
-                                                    { key: 'repair', name: '🔧 Repair', desc: 'Health per repair', unit: ' HP' }
-                                                ].map(upgrade => {
-                                                    const stat = shipStats[upgrade.key];
-                                                    const currentValue = stat.base + (stat.level - 1) * stat.perLevel;
-                                                    const nextValue = currentValue + stat.perLevel;
-                                                    const cost = getUpgradeCost(stat.level);
-                                                    const canAfford = loot >= cost;
-
-                                                    return (
-                                                        <div key={upgrade.key} className="upgrade-card">
-                                                            <div className="upgrade-header">
-                                                                <span className="upgrade-name">{upgrade.name}</span>
-                                                                <span className="upgrade-level">Lv. {stat.level}</span>
-                                                            </div>
-                                                            <div className="upgrade-description">{upgrade.desc}</div>
-                                                            <div className="upgrade-stats">
-                                                                <span className="stat-current">{currentValue}{upgrade.unit}</span>
-                                                                <span className="stat-arrow">→</span>
-                                                                <span className="stat-next">{nextValue}{upgrade.unit}</span>
-                                                            </div>
-                                                            <button
-                                                                className="upgrade-btn"
-                                                                onClick={() => purchaseUpgrade(upgrade.key)}
-                                                                disabled={!canAfford}
-                                                            >
-                                                                <span>🪙 {cost}</span>
-                                                                <span>UPGRADE</span>
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* Battle Arena */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                            {/* Player Ship */}
-                                            <div className="bg-opacity-40 bg-blue-900 backdrop-blur rounded-3xl p-6 border-4 border-blue-500 shadow-2xl">
-                                                <h3 style={{fontFamily: 'Cinzel'}} className="text-2xl font-bold text-yellow-400 text-center mb-4">
-                                                    {currentShipData?.name || 'Your Ship'}
-                                                </h3>
-                                                <div ref={playerShipRef} className="ship player-ship flex justify-center mb-4">
-                                                    <PirateShipSVG isPlayer={true} size={gameState.player.size} />
-                                                </div>
-                                                {/* Player Stats */}
-                                                <div className="grid grid-cols-2 gap-2 text-sm text-white mb-3">
-                                                    <div className="text-center">💥 <span className="text-yellow-400 font-bold">{gameState.player.damage}</span></div>
-                                                    <div className="text-center">🔧 <span className="text-green-400 font-bold">+{gameState.player.repairAmount}</span></div>
-                                                </div>
-                                                <div className="health-bar">
-                                                    <div className="health-fill" style={{width: `${(gameState.player.health / gameState.player.maxHealth) * 100}%`}}></div>
-                                                    <div className="health-text">{Math.floor(gameState.player.health)} / {gameState.player.maxHealth}</div>
-                                                </div>
-                                            </div>
-
-                                            {/* Enemy Ship */}
-                                            <div className={`bg-opacity-40 ${gameState.isBoss ? 'bg-purple-900 border-purple-500' : 'bg-red-900 border-red-500'} backdrop-blur rounded-3xl p-6 border-4 shadow-2xl`}>
-                                                <h3 style={{fontFamily: 'Cinzel'}} className="text-2xl font-bold text-yellow-400 text-center mb-4">
-                                                    {gameState.isBoss && gameState.bossData ? (
-                                                        <span className="flex items-center justify-center gap-2">
-                                                            <span className="text-3xl">{gameState.bossData.emoji}</span>
-                                                            {gameState.bossData.name}
-                                                        </span>
-                                                    ) : (
-                                                        `Level ${gameState.level} Enemy`
-                                                    )}
-                                                </h3>
-                                                <div ref={enemyShipRef} className="ship enemy-ship flex justify-center mb-4">
-                                                    <PirateShipSVG isPlayer={false} size={gameState.enemy.size} />
-                                                </div>
-                                                {/* Enemy Stats */}
-                                                <div className="text-center text-sm text-white mb-3">
-                                                    <span>💥 <span className="text-red-400 font-bold">{gameState.enemy.damage}</span></span>
-                                                </div>
-                                                <div className="health-bar">
-                                                    <div className="health-fill" style={{width: `${(gameState.enemy.health / gameState.enemy.maxHealth) * 100}%`}}></div>
-                                                    <div className="health-text">{Math.floor(gameState.enemy.health)} / {Math.floor(gameState.enemy.maxHealth)}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Auto Battle Toggle */}
-                                        <div className="auto-battle-container">
-                                            <div
-                                                className="auto-battle-toggle"
-                                                onClick={() => setAutoBattle(!autoBattle)}
-                                            >
-                                                <span className="text-white font-semibold">Auto Battle</span>
-                                                <div className={`toggle-switch ${autoBattle ? 'active' : ''}`}></div>
-                                            </div>
-                                        </div>
-
-                                        {/* Enemy Attack Warning - simple text only */}
-                                        {gameState.enemyCooldown <= 0.5 && (
-                                            <div className="text-center mb-4 py-2 bg-red-900 bg-opacity-60 rounded-xl border-2 border-red-500 animate-pulse">
-                                                <span className="text-red-400 font-bold text-lg">⚠️ INCOMING ATTACK!</span>
-                                            </div>
-                                        )}
-
-                                        {/* Combat Actions with Cooldowns */}
-                                        <div className="flex gap-4 justify-center mb-6 flex-wrap">
-                                            <button
-                                                onClick={playerAttack}
-                                                disabled={gameState.playerCooldown > 0}
-                                                style={{fontFamily: 'Cinzel'}}
-                                                className={`battle-action-btn fire ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
-                                            >
-                                                <div
-                                                    className={`btn-progress-bar ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
-                                                    style={{width: `${gameState.playerCooldown > 0 ? ((1 - gameState.playerCooldown / getPlayerCooldown()) * 100) : 100}%`}}
-                                                ></div>
-                                                <span className="btn-label">💣 FIRE!</span>
-                                                <span className="cooldown-text">
-                                                    {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
-                                                </span>
-                                            </button>
-                                            <button
-                                                onClick={playerRepair}
-                                                disabled={gameState.playerCooldown > 0 || gameState.player.health >= gameState.player.maxHealth}
-                                                style={{fontFamily: 'Cinzel'}}
-                                                className={`battle-action-btn repair ${gameState.playerCooldown <= 0 && gameState.player.health < gameState.player.maxHealth ? 'ready' : ''}`}
-                                            >
-                                                <div
-                                                    className={`btn-progress-bar ${gameState.playerCooldown <= 0 ? 'ready' : ''}`}
-                                                    style={{width: `${gameState.playerCooldown > 0 ? ((1 - gameState.playerCooldown / getPlayerCooldown()) * 100) : 100}%`}}
-                                                ></div>
-                                                <span className="btn-label">🔧 REPAIR</span>
-                                                <span className="cooldown-text">
-                                                    {gameState.playerCooldown > 0 ? `${gameState.playerCooldown.toFixed(1)}s` : 'Ready!'}
-                                                </span>
-                                            </button>
-                                        </div>
-
-                                        {/* Combat Log */}
-                                        <div className="combat-log text-white">
-                                            {gameState.combatLog.map((log, idx) => (
-                                                <div key={idx} className="log-entry">{renderLogEntry(log)}</div>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
+                        <button
+                            onClick={() => {
+                                setShowUserSelector(false);
+                                requireParentAccess(() => {
+                                    setEditingUser(null);
+                                    setShowUserEditor(true);
+                                });
+                            }}
+                            className="w-full mt-4 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                        >
+                            ➕ Add Family Member
+                        </button>
                     </div>
+                </div>
+            )}
 
-                    {/* Loot Reveal Modal - Battle Tab Only */}
-                    {currentView === 'battle' && showLootReveal && currentLoot && (
-                        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-                            <div className="text-center">
-                                <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-8">LOOT DROP!</h2>
-                                
-                                <div className={`loot-card w-64 h-80 mx-auto mb-8 ${lootRevealed ? 'flipped' : ''}`}>
-                                    <div className="loot-card-inner relative w-full h-full">
-                                        <div className="loot-card-front bg-gradient-to-br from-gray-700 to-gray-900 rounded-2xl flex items-center justify-center border-4 border-yellow-500">
-                                            <span className="text-8xl">❔</span>
-                                        </div>
-                                        <div className={`loot-card-back rounded-2xl flex flex-col items-center justify-center p-6 border-4 ${
-                                            currentLoot.rarity === 'legendary' ? 'bg-gradient-to-br from-purple-600 to-purple-900 border-purple-400 legendary-glow'
-                                            : currentLoot.rarity === 'rare' ? 'bg-gradient-to-br from-blue-600 to-blue-900 border-blue-400 rare-glow'
-                                            : 'bg-gradient-to-br from-gray-600 to-gray-800 border-gray-400'
-                                        }`}>
-                                            <span className="text-6xl mb-4">{currentLoot.emoji}</span>
-                                            <span className={`text-sm font-bold uppercase mb-2 ${
-                                                currentLoot.rarity === 'legendary' ? 'text-purple-300'
-                                                : currentLoot.rarity === 'rare' ? 'text-blue-300'
-                                                : 'text-gray-300'
-                                            }`}>{currentLoot.rarity}</span>
-                                            <span className="text-xl font-bold text-white mb-2">{currentLoot.name}</span>
-                                            <span className="text-yellow-400 font-bold">+{currentLoot.power} Power</span>
-                                            <span className="text-gray-300 text-sm mt-2 capitalize">{currentLoot.type}</span>
-                                        </div>
-                                    </div>
-                                </div>
+            {/* Pattern Lock Modals */}
+            {patternLock.isSettingUp && (
+                <PasswordSetupModal
+                    isOpen={true}
+                    onClose={() => patternLock.cancel()}
+                    patternLock={patternLock}
+                />
+            )}
 
-                                {lootRevealed && (
-                                    <div className="space-y-4">
-                                        {currentLoot.gemReward > 0 && (
-                                            <div className="text-2xl text-purple-300">+{currentLoot.gemReward} 💎 Gems!</div>
-                                        )}
-                                        {currentLoot.lootReward > 0 && (
-                                            <div className="text-2xl text-yellow-300">+{currentLoot.lootReward} 🪙 Loot!</div>
-                                        )}
-                                        <button
-                                            onClick={closeLootReveal}
-                                            style={{fontFamily: 'Cinzel'}}
-                                            className="mt-4 px-8 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl font-bold text-xl hover:scale-105 transition-transform"
-                                        >
-                                            CONTINUE
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+            {patternLock.isVerifying && (
+                <PasswordEntryModal
+                    isOpen={true}
+                    onClose={() => patternLock.cancel()}
+                    patternLock={patternLock}
+                />
+            )}
+
+            {/* Money Animations */}
+            <AnimationOverlay />
+        </div>
+    );
+};
+
+// ============ SIMPLE CARD COMPONENTS ============
+
+const ChoreCardSimple = ({ chore, onComplete, onEdit }) => {
+    const isCompleted = chore.completedToday || chore.completed;
+    const isPending = chore.pendingApproval;
+
+    return (
+        <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
+            isCompleted ? 'opacity-60' : ''
+        }`}>
+            <div className="flex items-center gap-3">
+                <span className="text-3xl">{chore.icon}</span>
+                <div className="flex-1">
+                    <div className="font-semibold text-gray-800">{chore.name}</div>
+                    <div className="text-sm text-gray-500">
+                        {chore.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
+                        {chore.points && ` • 💎 ${chore.points} gems`}
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    {!isCompleted && !isPending && (
+                        <button
+                            onClick={onComplete}
+                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
+                        >
+                            ✓ Done
+                        </button>
                     )}
-
-
-
-                    {/* Boss Intro - Battle Tab Only */}
-                    {currentView === 'battle' && showBossIntro && gameState.bossData && (
-                        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-                            <div className="text-center boss-entrance">
-                                <div className="text-9xl mb-8 pulse-glow" style={{color: '#ff4444'}}>{gameState.bossData.emoji}</div>
-                                <h2 style={{fontFamily: 'Cinzel'}} className="text-5xl font-bold text-red-500 mb-4">
-                                    âš ️ BOSS BATTLE âš ️
-                                </h2>
-                                <p className="text-3xl text-white">{gameState.bossData.name}</p>
-                            </div>
-                        </div>
+                    {isPending && (
+                        <span className="bg-yellow-100 text-yellow-700 px-3 py-2 rounded-lg text-sm font-medium">
+                            ⏳ Pending
+                        </span>
                     )}
-
-                    {/* Figurehead Unlock - Battle Tab Only */}
-                    {currentView === 'battle' && showFigureheadUnlock && unlockedFigurehead && (
-                        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-                            <div className="bg-gradient-to-br from-purple-800 to-pink-900 rounded-3xl p-12 text-center max-w-lg border-8 border-purple-400 shadow-2xl unlock-burst">
-                                <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
-                                    🏆 FIGUREHEAD UNLOCKED! 🏆
-                                </h2>
-                                <div className="text-8xl mb-4">{unlockedFigurehead.emoji}</div>
-                                <p className="text-2xl text-purple-200 font-bold mb-2">{unlockedFigurehead.name}</p>
-                                <p className="text-lg text-gray-300 mb-8">{unlockedFigurehead.description}</p>
-                                <button
-                                    onClick={() => setShowFigureheadUnlock(false)}
-                                    className="px-8 py-3 bg-purple-500 text-white rounded-xl font-bold text-xl hover:bg-purple-400"
-                                >
-                                    AWESOME!
-                                </button>
-                            </div>
-                        </div>
+                    {isCompleted && (
+                        <span className="bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm font-medium">
+                            ✅ Complete
+                        </span>
                     )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
-                    {/* Ship Unlock - Battle Tab Only */}
-                    {currentView === 'battle' && showShipUnlock && unlockedShip && (
-                        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
-                            <div className="bg-gradient-to-br from-blue-800 to-cyan-900 rounded-3xl p-12 text-center max-w-lg border-8 border-blue-400 shadow-2xl unlock-burst">
-                                <h2 style={{fontFamily: 'Cinzel'}} className="text-4xl font-bold text-white mb-4">
-                                    🚢 NEW SHIP! 🚢
-                                </h2>
-                                <div className="text-8xl mb-4">{unlockedShip.emoji}</div>
-                                <p className="text-2xl text-blue-200 font-bold mb-2">{unlockedShip.name}</p>
-                                <p className="text-lg text-gray-300 mb-8">{unlockedShip.description}</p>
-                                <button
-                                    onClick={() => setShowShipUnlock(false)}
-                                    className="px-8 py-3 bg-blue-500 text-white rounded-xl font-bold text-xl hover:bg-blue-400"
-                                >
-                                    SET SAIL!
-                                </button>
-                            </div>
-                        </div>
-                    )}
+const JobCardSimple = ({ job, chores, onComplete, onEdit }) => {
+    const isLocked = job.isLocked;
+    const completionsToday = job.completions?.filter(c => {
+        const today = new Date().toDateString();
+        return new Date(c.date).toDateString() === today;
+    }).length || 0;
+    const maxCompletions = job.maxCompletionsPerPeriod;
+    const canComplete = !isLocked && (!maxCompletions || completionsToday < maxCompletions);
 
-                    {/* Password Setup Modal */}
-                    {showPasswordSetup && (
-                        <div className="modal-overlay" onClick={() => { setShowPasswordSetup(false); setPendingPasswordAction(null); clearPatternInput(); }}>
-                            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                <h2 className="text-2xl font-bold text-purple-600 text-center mb-2">🔐 Create Parent Pattern</h2>
-                                <p className="text-gray-600 text-center mb-4">
-                                    Draw a pattern connecting at least 4 dots
-                                </p>
-
-                                <div
-                                    className="pattern-lock-container"
-                                    ref={patternGridRef}
-                                    onMouseMove={handlePatternMove}
-                                    onMouseUp={handlePatternEnd}
-                                    onMouseLeave={handlePatternEnd}
-                                    onTouchMove={handlePatternMove}
-                                    onTouchEnd={handlePatternEnd}
-                                >
-                                    <div className="pattern-grid">
-                                        <svg className="pattern-svg">
-                                            <path
-                                                className={`pattern-line ${passwordSuccess ? 'success' : ''}`}
-                                                d={getPatternPath(patternInput, isDrawingPattern ? currentPoint : null)}
-                                            />
-                                        </svg>
-                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
-                                            <div
-                                                key={idx}
-                                                ref={el => dotRefs.current[idx] = el}
-                                                className={`pattern-dot ${patternInput.includes(idx) ? 'selected' : ''} ${passwordSuccess ? 'success' : ''}`}
-                                                onMouseDown={(e) => handlePatternStart(idx, e)}
-                                                onTouchStart={(e) => handlePatternStart(idx, e)}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="pattern-hint">
-                                        {patternInput.length > 0 ? (
-                                            <span className="pattern-dots-count">{patternInput.length} dots selected</span>
-                                        ) : (
-                                            'Touch a dot to start'
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 mt-4">
-                                    <button
-                                        onClick={clearPatternInput}
-                                        className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
-                                    >
-                                        Clear
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowPasswordSetup(false); setPendingPasswordAction(null); clearPatternInput(); }}
-                                        className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Password Entry Modal */}
-                    {showPasswordEntry && (
-                        <div className="modal-overlay" onClick={() => { setShowPasswordEntry(false); setPendingPasswordAction(null); clearPatternInput(); }}>
-                            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                <h2 className="text-2xl font-bold text-purple-600 text-center mb-2">🔐 Enter Parent Pattern</h2>
-                                <p className="text-gray-600 text-center mb-4">
-                                    Draw your secret pattern to continue
-                                </p>
-
-                                {passwordError && (
-                                    <div className="bg-red-100 text-red-600 p-3 rounded-xl text-center mb-4 font-semibold">
-                                        ❌ Wrong pattern! Try again.
-                                    </div>
-                                )}
-
-                                <div
-                                    className="pattern-lock-container"
-                                    ref={patternGridRef}
-                                    onMouseMove={handlePatternMove}
-                                    onMouseUp={handlePatternEnd}
-                                    onMouseLeave={handlePatternEnd}
-                                    onTouchMove={handlePatternMove}
-                                    onTouchEnd={handlePatternEnd}
-                                >
-                                    <div className="pattern-grid">
-                                        <svg className="pattern-svg">
-                                            <path
-                                                className={`pattern-line ${passwordError ? 'error' : ''} ${passwordSuccess ? 'success' : ''}`}
-                                                d={getPatternPath(patternInput, isDrawingPattern ? currentPoint : null)}
-                                            />
-                                        </svg>
-                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
-                                            <div
-                                                key={idx}
-                                                ref={el => dotRefs.current[idx] = el}
-                                                className={`pattern-dot ${patternInput.includes(idx) ? 'selected' : ''} ${passwordError ? 'error' : ''} ${passwordSuccess ? 'success' : ''}`}
-                                                onMouseDown={(e) => handlePatternStart(idx, e)}
-                                                onTouchStart={(e) => handlePatternStart(idx, e)}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="pattern-hint">
-                                        {patternInput.length > 0 ? (
-                                            <span className="pattern-dots-count">{patternInput.length} dots</span>
-                                        ) : (
-                                            'Touch a dot to start'
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 mt-4">
-                                    <button
-                                        onClick={clearPatternInput}
-                                        className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
-                                    >
-                                        Clear
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowPasswordEntry(false); setPendingPasswordAction(null); clearPatternInput(); }}
-                                        className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Chore Management Modal */}
-                    {showChoreManagement && (
-                        <div className="modal-overlay" onClick={() => setShowChoreManagement(false)}>
-                            <div className="modal-content" style={{maxWidth: '600px'}} onClick={e => e.stopPropagation()}>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold text-purple-600">⚙️ Manage Chores</h2>
-                                    <button
-                                        onClick={() => setShowChoreManagement(false)}
-                                        className="text-gray-400 hover:text-gray-600 text-2xl"
-                                    >✕</button>
-                                </div>
-
-                                <div className="management-tabs">
-                                    <button
-                                        className={`management-tab ${choreManagementTab === 'active' ? 'active' : ''}`}
-                                        onClick={() => setChoreManagementTab('active')}
-                                    >
-                                        📋 Active ({tasks.length})
-                                    </button>
-                                    <button
-                                        className={`management-tab ${choreManagementTab === 'saved' ? 'active' : ''}`}
-                                        onClick={() => setChoreManagementTab('saved')}
-                                    >
-                                        💾 Saved ({savedChores.length})
-                                    </button>
-                                </div>
-
-                                {choreManagementTab === 'active' && (
-                                    <>
-                                        <button
-                                            onClick={() => openChoreEditor()}
-                                            className="w-full py-3 mb-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold hover:scale-102 transition-all"
-                                        >
-                                            ➕ Add New Chore
-                                        </button>
-
-                                        <div className="space-y-3 max-h-64 overflow-y-auto">
-                                            {tasks.map(chore => (
-                                                <div key={chore.id} className="chore-card">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-3xl">{chore.icon}</span>
-                                                            <div>
-                                                                <div className="font-bold text-gray-800">{chore.name}</div>
-                                                                <div className="text-sm text-purple-600">💎 {chore.points} gems</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => openChoreEditor(chore)}
-                                                                className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
-                                                                title="Edit"
-                                                            >✏️</button>
-                                                            <button
-                                                                onClick={() => saveChoreForLater(chore.id)}
-                                                                className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
-                                                                title="Save for later"
-                                                            >💾</button>
-                                                            <button
-                                                                onClick={() => deleteChore(chore.id)}
-                                                                className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                                                                title="Delete"
-                                                            >🗑️</button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-
-                                {choreManagementTab === 'saved' && (
-                                    <div className="space-y-3 max-h-80 overflow-y-auto">
-                                        {savedChores.length === 0 ? (
-                                            <div className="text-center text-gray-500 py-8">
-                                                No saved chores. Use the 💾 button to save chores for later!
-                                            </div>
-                                        ) : savedChores.map(chore => (
-                                            <div key={chore.id} className="chore-card saved-later">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-3xl">{chore.icon}</span>
-                                                        <div>
-                                                            <div className="font-bold text-gray-800">{chore.name}</div>
-                                                            <div className="text-sm text-purple-600">💎 {chore.points} gems</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => restoreChore(chore.id)}
-                                                            className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"
-                                                            title="Restore to active"
-                                                        >➕</button>
-                                                        <button
-                                                            onClick={() => setSavedChores(prev => prev.filter(c => c.id !== chore.id))}
-                                                            className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                                                            title="Delete"
-                                                        >🗑️</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className="mt-6 pt-4 border-t">
-                                    <button
-                                        onClick={() => {
-                                            setParentPassword(null);
-                                            setShowChoreManagement(false);
-                                        }}
-                                        className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl font-semibold hover:bg-gray-200"
-                                    >
-                                        🔄 Reset Parent Pattern
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Chore Editor Modal */}
-                    {showChoreEditor && (
-                        <div className="modal-overlay" onClick={() => setShowChoreEditor(false)}>
-                            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                <h2 className="text-2xl font-bold text-purple-600 text-center mb-6">
-                                    {editingChore ? '✏️ Edit Chore' : '➕ New Chore'}
-                                </h2>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Chore Name</label>
-                                        <input
-                                            type="text"
-                                            className="input-field"
-                                            placeholder="e.g., Clean your room"
-                                            value={choreForm.name}
-                                            onChange={e => setChoreForm(prev => ({ ...prev, name: e.target.value }))}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Icon</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {CHORE_ICONS.map(icon => (
-                                                <button
-                                                    key={icon}
-                                                    onClick={() => setChoreForm(prev => ({ ...prev, icon }))}
-                                                    className={`text-2xl p-2 rounded-lg transition-all ${
-                                                        choreForm.icon === icon
-                                                            ? 'bg-purple-500 scale-110'
-                                                            : 'bg-gray-100 hover:bg-gray-200'
-                                                    }`}
-                                                >
-                                                    {icon}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Gem Reward</label>
-                                        <div className="flex items-center gap-3">
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="100"
-                                                className="input-field gem-input"
-                                                value={choreForm.points}
-                                                onChange={e => setChoreForm(prev => ({ ...prev, points: parseInt(e.target.value) || 1 }))}
-                                            />
-                                            <span className="text-2xl">💎</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="toggle-label block mb-2">Repeat Options</label>
-                                        <div className="flex flex-col gap-2">
-                                            <button
-                                                onClick={() => setChoreForm(prev => ({ ...prev, repeatType: 'once' }))}
-                                                className={`p-3 rounded-xl text-left transition-all ${
-                                                    choreForm.repeatType === 'once'
-                                                        ? 'bg-purple-500 text-white'
-                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                            >
-                                                <span className="font-semibold">🔲 One-time only</span>
-                                                <span className="block text-sm opacity-80">Complete once, then remove</span>
-                                            </button>
-                                            <button
-                                                onClick={() => setChoreForm(prev => ({ ...prev, repeatType: 'daily' }))}
-                                                className={`p-3 rounded-xl text-left transition-all ${
-                                                    choreForm.repeatType === 'daily'
-                                                        ? 'bg-purple-500 text-white'
-                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                            >
-                                                <span className="font-semibold">🔄 Repeat daily</span>
-                                                <span className="block text-sm opacity-80">Resets each day</span>
-                                            </button>
-                                            <button
-                                                onClick={() => setChoreForm(prev => ({ ...prev, repeatType: 'multiple' }))}
-                                                className={`p-3 rounded-xl text-left transition-all ${
-                                                    choreForm.repeatType === 'multiple'
-                                                        ? 'bg-purple-500 text-white'
-                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                            >
-                                                <span className="font-semibold">🔁 Multiple per day</span>
-                                                <span className="block text-sm opacity-80">Can complete multiple times daily</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 mt-6">
-                                    <button
-                                        onClick={() => setShowChoreEditor(false)}
-                                        className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={editingChore ? updateChore : addNewChore}
-                                        disabled={!choreForm.name.trim()}
-                                        className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {editingChore ? 'Save Changes' : 'Add Chore'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Parent Review Modal */}
-                    {showParentReview && (
-                        <div className="modal-overlay" onClick={() => setShowParentReview(false)}>
-                            <div className="modal-content" style={{maxWidth: '600px'}} onClick={e => e.stopPropagation()}>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold text-purple-600">👨‍👩‍👧 Review Chores</h2>
-                                    <button
-                                        onClick={() => setShowParentReview(false)}
-                                        className="text-gray-400 hover:text-gray-600 text-2xl"
-                                    >✕</button>
-                                </div>
-
-                                <p className="text-gray-600 mb-4">
-                                    Review each completed chore. Approved chores award gems!
-                                </p>
-
-                                <div className="space-y-4 max-h-96 overflow-y-auto">
-                                    {pendingApproval.map(chore => {
-                                        const key = chore.approvalId || chore.id;
-                                        return (
-                                            <div key={key} className="parent-review-card">
-                                                <div className="flex items-center gap-4 mb-3">
-                                                    <span className="text-4xl">{chore.icon}</span>
-                                                    <div className="flex-1">
-                                                        <div className="font-bold text-lg text-gray-800">
-                                                            {chore.name}
-                                                            {chore.repeatType === 'multiple' && (
-                                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-2">🔁</span>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-purple-600">
-                                                            <span>💎 {chore.totalPoints} gems</span>
-                                                            {chore.streakBonus > 0 && (
-                                                                <span className="text-orange-500">(+{chore.streakBonus} streak bonus)</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="review-actions">
-                                                    <button
-                                                        onClick={() => setReviewDecision(key, 'pass')}
-                                                        className={`review-btn pass ${reviewDecisions[key] === 'pass' ? 'ring-4 ring-green-300' : ''}`}
-                                                    >
-                                                        ✅ Approve
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setReviewDecision(key, 'fail')}
-                                                        className={`review-btn fail ${reviewDecisions[key] === 'fail' ? 'ring-4 ring-red-300' : ''}`}
-                                                    >
-                                                        ❌ Redo
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <div className="mt-6 pt-4 border-t">
-                                    <button
-                                        onClick={submitReviews}
-                                        disabled={Object.keys(reviewDecisions).length !== pendingApproval.length}
-                                        className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold text-lg hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        Submit Reviews ({Object.keys(reviewDecisions).length}/{pendingApproval.length})
-                                    </button>
-                                </div>
-                            </div>
+    return (
+        <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
+            isLocked ? 'opacity-60' : ''
+        }`}>
+            <div className="flex items-center gap-3">
+                <span className="text-3xl">{job.icon || '💼'}</span>
+                <div className="flex-1">
+                    <div className="font-semibold text-gray-800">{job.title}</div>
+                    <div className="text-sm text-gray-500">
+                        {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
+                        {job.allowMultipleCompletions && maxCompletions &&
+                            ` • ${completionsToday}/${maxCompletions} today`
+                        }
+                    </div>
+                    {isLocked && (
+                        <div className="text-xs text-orange-600 mt-1">
+                            🔒 Complete {job.unlockConditions?.dailyChores || 0} daily chores to unlock
                         </div>
                     )}
                 </div>
-            );
-        };
-        
+                <div className="text-right">
+                    <div className="text-green-600 font-bold text-lg">
+                        {formatCents(job.value)}
+                    </div>
+                    {canComplete && (
+                        <button
+                            onClick={() => onComplete(1)}
+                            className="mt-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold"
+                        >
+                            💰 Earn
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
-export default ChoreQuestApp;
+export default FamilyEconomyApp;

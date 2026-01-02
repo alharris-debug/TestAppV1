@@ -183,9 +183,8 @@ export {
     centsToDollars,
     formatCents,
     formatCentsShort,
-    parseCurrencyInput,
     multiplyCents,
-    calculateBillsForAnimation
+    calculateBillCount
 } from './utils/currency.js';
 
 // Date/Time Utilities
