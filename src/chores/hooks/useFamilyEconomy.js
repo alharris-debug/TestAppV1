@@ -185,14 +185,15 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
 
         setUsers(prev => [...prev, newUser]);
 
-        // If this is the first child, make them active
-        if (userData.role === USER_ROLE.CHILD && childUsers.length === 0) {
+        // If there's no active user, make this user active
+        // Or if this is the first child, make them active
+        if (!activeUserId || (userData.role === USER_ROLE.CHILD && childUsers.length === 0)) {
             setActiveUserId(newUser.id);
         }
 
         soundSystem?.buttonClick?.();
         return newUser;
-    }, [childUsers.length, soundSystem]);
+    }, [activeUserId, childUsers.length, soundSystem]);
 
     /**
      * Update a user
