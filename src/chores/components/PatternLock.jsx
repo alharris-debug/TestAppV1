@@ -53,14 +53,13 @@ export const PatternLockGrid = ({
     return (
         <div
             className="pattern-lock-container"
-            ref={gridRef}
             onMouseMove={onPatternMove}
             onMouseUp={onPatternEnd}
             onMouseLeave={onPatternEnd}
             onTouchMove={onPatternMove}
             onTouchEnd={onPatternEnd}
         >
-            <div className="pattern-grid">
+            <div className="pattern-grid" ref={gridRef}>
                 <svg className="pattern-svg">
                     <path className={lineClass} d={pathString} />
                 </svg>

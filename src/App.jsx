@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 // Import Family Economy system
 import {
@@ -53,15 +53,15 @@ const FamilyEconomyApp = () => {
     // Money animations
     const { showEarning, showSpending, showCashBurst, AnimationOverlay } = useMoneyAnimations(soundSystem);
 
-    // Pattern lock for parent access
-    const [pendingAction, setPendingAction] = useState(null);
+    // Pattern lock for parent access - use ref to avoid stale closure
+    const pendingActionRef = useRef(null);
     const patternLock = usePatternLock({
         storedPassword: economy.parentPassword,
         onPasswordSet: economy.setParentPassword,
         onVerificationSuccess: () => {
-            if (pendingAction) {
-                pendingAction();
-                setPendingAction(null);
+            if (pendingActionRef.current) {
+                pendingActionRef.current();
+                pendingActionRef.current = null;
             }
         },
         soundSystem
@@ -80,7 +80,7 @@ const FamilyEconomyApp = () => {
 
     // Request parent access
     const requireParentAccess = (action) => {
-        setPendingAction(() => action);
+        pendingActionRef.current = action;
         patternLock.requestAccess();
     };
 
