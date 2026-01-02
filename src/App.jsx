@@ -637,6 +637,51 @@ const FamilyEconomyApp = () => {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                                 />
                             </div>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    id="allowMultiple"
+                                    checked={jobForm.allowMultipleCompletions}
+                                    onChange={(e) => setJobForm({
+                                        ...jobForm,
+                                        allowMultipleCompletions: e.target.checked,
+                                        maxCompletionsPerPeriod: e.target.checked ? (jobForm.maxCompletionsPerPeriod || 3) : null
+                                    })}
+                                    className="w-5 h-5 rounded"
+                                />
+                                <label htmlFor="allowMultiple" className="text-sm font-medium text-gray-700">
+                                    Allow multiple completions per day
+                                </label>
+                            </div>
+                            {jobForm.allowMultipleCompletions && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Max completions per day
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={jobForm.maxCompletionsPerPeriod || 3}
+                                        onChange={(e) => setJobForm({
+                                            ...jobForm,
+                                            maxCompletionsPerPeriod: parseInt(e.target.value) || 1
+                                        })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    />
+                                </div>
+                            )}
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    id="requiresApproval"
+                                    checked={jobForm.requiresApproval}
+                                    onChange={(e) => setJobForm({...jobForm, requiresApproval: e.target.checked})}
+                                    className="w-5 h-5 rounded"
+                                />
+                                <label htmlFor="requiresApproval" className="text-sm font-medium text-gray-700">
+                                    Requires parent approval
+                                </label>
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
@@ -718,6 +763,65 @@ const FamilyEconomyApp = () => {
                 </div>
             )}
 
+            {/* Parent Review Modal */}
+            {showParentReview && (
+                <div className="modal-overlay" onClick={() => setShowParentReview(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                        <h2 className="text-xl font-bold text-purple-600 mb-4">
+                            👨‍👩‍👧 Parent Review
+                        </h2>
+                        {economy.jobsNeedingApproval.length === 0 ? (
+                            <p className="text-gray-600 text-center py-4">No items pending approval!</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {economy.jobsNeedingApproval.map(job => {
+                                    const pendingCount = job.completions.filter(c => c.status === 'pending').length;
+                                    const pendingValue = pendingCount * job.value;
+                                    const user = economy.users.find(u => u.id === job.userId);
+                                    return (
+                                        <div key={job.id} className="bg-gray-50 rounded-xl p-4">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <span className="text-2xl">{job.icon || '💼'}</span>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-800">{job.title}</div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {user?.name} • {pendingCount}x = {formatCents(pendingValue)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        economy.approveJob(job.id, 'parent');
+                                                    }}
+                                                    className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
+                                                >
+                                                    ✓ Approve
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        economy.rejectJob(job.id, 'parent');
+                                                    }}
+                                                    className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
+                                                >
+                                                    ✕ Reject
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        <button
+                            onClick={() => setShowParentReview(false)}
+                            className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Money Animations */}
             <AnimationOverlay />
         </div>
@@ -743,7 +847,14 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit }) => {
                         {chore.points && ` • 💎 ${chore.points} gems`}
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                    <button
+                        onClick={onEdit}
+                        className="text-gray-400 hover:text-purple-600 p-2"
+                        title="Edit (Parent)"
+                    >
+                        ✏️
+                    </button>
                     {!isCompleted && !isPending && (
                         <button
                             onClick={onComplete}
@@ -797,18 +908,27 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit }) => {
                         </div>
                     )}
                 </div>
-                <div className="text-right">
-                    <div className="text-green-600 font-bold text-lg">
-                        {formatCents(job.value)}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onEdit}
+                        className="text-gray-400 hover:text-purple-600 p-2"
+                        title="Edit (Parent)"
+                    >
+                        ✏️
+                    </button>
+                    <div className="text-right">
+                        <div className="text-green-600 font-bold text-lg">
+                            {formatCents(job.value)}
+                        </div>
+                        {canComplete && (
+                            <button
+                                onClick={() => onComplete(1)}
+                                className="mt-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold"
+                            >
+                                💰 Earn
+                            </button>
+                        )}
                     </div>
-                    {canComplete && (
-                        <button
-                            onClick={() => onComplete(1)}
-                            className="mt-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold"
-                        >
-                            💰 Earn
-                        </button>
-                    )}
                 </div>
             </div>
         </div>
