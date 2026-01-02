@@ -133,6 +133,11 @@ export const usePatternLock = ({
                     pendingAction();
                     setPendingAction(null);
                 }
+
+                // Also call verification success after setup (grants access)
+                if (onVerificationSuccess) {
+                    onVerificationSuccess();
+                }
             }, 600);
         } else {
             // Verifying password
