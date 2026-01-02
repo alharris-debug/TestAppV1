@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 // Import Family Economy system
 import {
     useFamilyEconomy,
+    loadFamilyEconomyState,
     usePatternLock,
     useMoneyAnimations,
 
@@ -47,8 +48,11 @@ const FamilyEconomyApp = () => {
         }
     };
 
-    // Initialize Family Economy system
-    const economy = useFamilyEconomy({ soundSystem });
+    // Initialize Family Economy system with saved state from localStorage
+    const economy = useFamilyEconomy({
+        savedState: loadFamilyEconomyState(),
+        soundSystem
+    });
 
     // Money animations
     const { showEarning, showSpending, showCashBurst, AnimationOverlay } = useMoneyAnimations(soundSystem);

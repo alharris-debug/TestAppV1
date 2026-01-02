@@ -54,7 +54,7 @@ export {
 // Hooks
 export { useChoreManagement, default as useChoreManagementHook } from './hooks/useChoreManagement.js';
 export { usePatternLock, default as usePatternLockHook } from './hooks/usePatternLock.js';
-export { useFamilyEconomy, default as useFamilyEconomyHook } from './hooks/useFamilyEconomy.js';
+export { useFamilyEconomy, loadFamilyEconomyState, default as useFamilyEconomyHook } from './hooks/useFamilyEconomy.js';
 
 // Core Chore Components
 export {
