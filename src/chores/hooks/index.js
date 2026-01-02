@@ -6,3 +6,4 @@
 
 export { useChoreManagement, default as useChoreManagementDefault } from './useChoreManagement.js';
 export { usePatternLock, default as usePatternLockDefault } from './usePatternLock.js';
+export { useFamilyEconomy, default as useFamilyEconomyDefault } from './useFamilyEconomy.js';
