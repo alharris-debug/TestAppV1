@@ -28,9 +28,12 @@ import {
     // Constants
     CHORE_ICONS,
     RECURRENCE_TYPE,
+    DEFAULT_CHORE_FORM,
+    DEFAULT_JOB_FORM,
 
     // Utilities
-    formatCents
+    formatCents,
+    dollarsToCents
 } from './chores';
 
 // Import styles
@@ -81,6 +84,117 @@ const FamilyEconomyApp = () => {
     const [showChoreEditor, setShowChoreEditor] = useState(false);
     const [editingChore, setEditingChore] = useState(null);
     const [showParentReview, setShowParentReview] = useState(false);
+
+    // Form State
+    const [choreForm, setChoreForm] = useState({ ...DEFAULT_CHORE_FORM });
+    const [jobForm, setJobForm] = useState({ ...DEFAULT_JOB_FORM });
+    const [userForm, setUserForm] = useState({ name: '', avatar: '👤', role: 'child' });
+
+    // Reset form when opening editors
+    const openChoreEditor = (chore = null) => {
+        if (chore) {
+            setChoreForm({
+                name: chore.name || '',
+                icon: chore.icon || '📋',
+                points: chore.points || 5,
+                repeatType: chore.recurrence || RECURRENCE_TYPE.DAILY
+            });
+            setEditingChore(chore);
+        } else {
+            setChoreForm({ ...DEFAULT_CHORE_FORM });
+            setEditingChore(null);
+        }
+        setShowChoreEditor(true);
+    };
+
+    const openJobEditor = (job = null) => {
+        if (job) {
+            setJobForm({
+                title: job.title || '',
+                icon: job.icon || '💼',
+                value: job.value || 100,
+                recurrence: job.recurrence || RECURRENCE_TYPE.DAILY,
+                unlockConditions: job.unlockConditions || { dailyChores: 0, weeklyChores: 0 },
+                allowMultipleCompletions: job.allowMultipleCompletions || false,
+                maxCompletionsPerPeriod: job.maxCompletionsPerPeriod || null,
+                requiresApproval: job.requiresApproval !== false,
+                description: job.description || ''
+            });
+            setEditingJob(job);
+        } else {
+            setJobForm({ ...DEFAULT_JOB_FORM });
+            setEditingJob(null);
+        }
+        setShowJobEditor(true);
+    };
+
+    const openUserEditor = (user = null) => {
+        if (user) {
+            setUserForm({
+                name: user.name || '',
+                avatar: user.avatar || '👤',
+                role: user.role || 'child'
+            });
+            setEditingUser(user);
+        } else {
+            setUserForm({ name: '', avatar: '👤', role: 'child' });
+            setEditingUser(null);
+        }
+        setShowUserEditor(true);
+    };
+
+    // Save handlers
+    const handleSaveChore = () => {
+        if (!choreForm.name.trim()) return;
+
+        const choreData = {
+            name: choreForm.name,
+            icon: choreForm.icon,
+            points: choreForm.points,
+            recurrence: choreForm.repeatType
+        };
+
+        if (editingChore) {
+            economy.updateChore(editingChore.id, choreData);
+        } else {
+            economy.addChore(choreData);
+        }
+        setShowChoreEditor(false);
+    };
+
+    const handleSaveJob = () => {
+        if (!jobForm.title.trim()) return;
+
+        const jobData = {
+            title: jobForm.title,
+            icon: jobForm.icon,
+            value: jobForm.value,
+            recurrence: jobForm.recurrence,
+            unlockConditions: jobForm.unlockConditions,
+            allowMultipleCompletions: jobForm.allowMultipleCompletions,
+            maxCompletionsPerPeriod: jobForm.maxCompletionsPerPeriod,
+            requiresApproval: jobForm.requiresApproval,
+            description: jobForm.description
+        };
+
+        if (editingJob) {
+            economy.updateJob(editingJob.id, jobData);
+        } else {
+            economy.addJob(jobData);
+        }
+        setShowJobEditor(false);
+    };
+
+    const handleSaveUser = () => {
+        if (!userForm.name.trim()) return;
+
+        if (editingUser) {
+            economy.updateUser(editingUser.id, userForm);
+        } else {
+            economy.addUser(userForm);
+        }
+        setShowUserEditor(false);
+    };
 
     // Request parent access
     const requireParentAccess = (action) => {
@@ -223,10 +337,7 @@ const FamilyEconomyApp = () => {
                                         key={chore.id}
                                         chore={chore}
                                         onComplete={() => handleCompleteChore(chore.id)}
-                                        onEdit={() => requireParentAccess(() => {
-                                            setEditingChore(chore);
-                                            setShowChoreEditor(true);
-                                        })}
+                                        onEdit={() => requireParentAccess(() => openChoreEditor(chore))}
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.DAILY).length === 0 && (
@@ -246,10 +357,7 @@ const FamilyEconomyApp = () => {
                                         key={chore.id}
                                         chore={chore}
                                         onComplete={() => handleCompleteChore(chore.id)}
-                                        onEdit={() => requireParentAccess(() => {
-                                            setEditingChore(chore);
-                                            setShowChoreEditor(true);
-                                        })}
+                                        onEdit={() => requireParentAccess(() => openChoreEditor(chore))}
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.WEEKLY).length === 0 && (
@@ -260,10 +368,7 @@ const FamilyEconomyApp = () => {
 
                         {/* Add Chore Button (Parent Only) */}
                         <button
-                            onClick={() => requireParentAccess(() => {
-                                setEditingChore(null);
-                                setShowChoreEditor(true);
-                            })}
+                            onClick={() => requireParentAccess(() => openChoreEditor())}
                             className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
                         >
                             <span>➕</span> Add Chore (Parent)
@@ -286,10 +391,7 @@ const FamilyEconomyApp = () => {
                                 job={job}
                                 chores={userChores}
                                 onComplete={(count) => handleCompleteJob(job.id, count)}
-                                onEdit={() => requireParentAccess(() => {
-                                    setEditingJob(job);
-                                    setShowJobEditor(true);
-                                })}
+                                onEdit={() => requireParentAccess(() => openJobEditor(job))}
                             />
                         ))}
 
@@ -301,10 +403,7 @@ const FamilyEconomyApp = () => {
 
                         {/* Add Job Button (Parent Only) */}
                         <button
-                            onClick={() => requireParentAccess(() => {
-                                setEditingJob(null);
-                                setShowJobEditor(true);
-                            })}
+                            onClick={() => requireParentAccess(() => openJobEditor())}
                             className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
                         >
                             <span>➕</span> Add Job (Parent)
@@ -394,10 +493,7 @@ const FamilyEconomyApp = () => {
                         <button
                             onClick={() => {
                                 setShowUserSelector(false);
-                                requireParentAccess(() => {
-                                    setEditingUser(null);
-                                    setShowUserEditor(true);
-                                });
+                                requireParentAccess(() => openUserEditor());
                             }}
                             className="w-full mt-4 py-3 bg-purple-500 text-white rounded-xl font-semibold"
                         >
@@ -422,6 +518,204 @@ const FamilyEconomyApp = () => {
                     onClose={() => patternLock.cancel()}
                     patternLock={patternLock}
                 />
+            )}
+
+            {/* Chore Editor Modal */}
+            {showChoreEditor && (
+                <div className="modal-overlay" onClick={() => setShowChoreEditor(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-purple-600 mb-4">
+                            {editingChore ? '✏️ Edit Chore' : '➕ Add Chore'}
+                        </h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <input
+                                    type="text"
+                                    value={choreForm.name}
+                                    onChange={(e) => setChoreForm({...choreForm, name: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                    placeholder="e.g., Make bed"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.entries(CHORE_ICONS).map(([key, icon]) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => setChoreForm({...choreForm, icon})}
+                                            className={`text-2xl p-2 rounded-lg ${choreForm.icon === icon ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-gray-100'}`}
+                                        >
+                                            {icon}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                                <select
+                                    value={choreForm.repeatType}
+                                    onChange={(e) => setChoreForm({...choreForm, repeatType: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                >
+                                    <option value={RECURRENCE_TYPE.DAILY}>Daily</option>
+                                    <option value={RECURRENCE_TYPE.WEEKLY}>Weekly</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setShowChoreEditor(false)}
+                                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveChore}
+                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Job Editor Modal */}
+            {showJobEditor && (
+                <div className="modal-overlay" onClick={() => setShowJobEditor(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-purple-600 mb-4">
+                            {editingJob ? '✏️ Edit Job' : '➕ Add Job'}
+                        </h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                <input
+                                    type="text"
+                                    value={jobForm.title}
+                                    onChange={(e) => setJobForm({...jobForm, title: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                    placeholder="e.g., Vacuum living room"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Value ($)</label>
+                                <input
+                                    type="number"
+                                    step="0.25"
+                                    min="0"
+                                    value={(jobForm.value / 100).toFixed(2)}
+                                    onChange={(e) => setJobForm({...jobForm, value: Math.round(parseFloat(e.target.value || 0) * 100)})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                                <select
+                                    value={jobForm.recurrence}
+                                    onChange={(e) => setJobForm({...jobForm, recurrence: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                >
+                                    <option value={RECURRENCE_TYPE.DAILY}>Daily</option>
+                                    <option value={RECURRENCE_TYPE.WEEKLY}>Weekly</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Unlock after completing # daily chores
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={jobForm.unlockConditions.dailyChores}
+                                    onChange={(e) => setJobForm({
+                                        ...jobForm,
+                                        unlockConditions: {...jobForm.unlockConditions, dailyChores: parseInt(e.target.value) || 0}
+                                    })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setShowJobEditor(false)}
+                                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveJob}
+                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* User Editor Modal */}
+            {showUserEditor && (
+                <div className="modal-overlay" onClick={() => setShowUserEditor(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-purple-600 mb-4">
+                            {editingUser ? '✏️ Edit Family Member' : '➕ Add Family Member'}
+                        </h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <input
+                                    type="text"
+                                    value={userForm.name}
+                                    onChange={(e) => setUserForm({...userForm, name: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                    placeholder="e.g., Emma"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Avatar</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['👧', '👦', '👩', '👨', '👶', '🧒', '👱‍♀️', '👱', '🧑', '👴', '👵'].map(emoji => (
+                                        <button
+                                            key={emoji}
+                                            onClick={() => setUserForm({...userForm, avatar: emoji})}
+                                            className={`text-2xl p-2 rounded-lg ${userForm.avatar === emoji ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-gray-100'}`}
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                <select
+                                    value={userForm.role}
+                                    onChange={(e) => setUserForm({...userForm, role: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                >
+                                    <option value="child">Child</option>
+                                    <option value="parent">Parent</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setShowUserEditor(false)}
+                                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveUser}
+                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Money Animations */}
