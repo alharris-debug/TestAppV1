@@ -86,9 +86,9 @@ const FamilyEconomyApp = () => {
 
     // Get current user's data
     const activeUser = economy.activeUser;
-    const userChores = economy.getUserChores(economy.activeUserId);
-    const userJobs = economy.getUserJobs(economy.activeUserId);
-    const userTransactions = economy.getUserTransactions(economy.activeUserId);
+    const userChores = economy.activeUserChores || [];
+    const userJobs = economy.activeUserJobs || [];
+    const userTransactions = economy.activeUserTransactions || [];
 
     // Handle chore completion
     const handleCompleteChore = (choreId) => {
@@ -107,7 +107,7 @@ const FamilyEconomyApp = () => {
     };
 
     // Calculate pending approvals count
-    const pendingApprovalsCount = economy.getPendingApprovals().length;
+    const pendingApprovalsCount = (economy.jobsNeedingApproval || []).length;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
