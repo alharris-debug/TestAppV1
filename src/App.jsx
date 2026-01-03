@@ -1501,7 +1501,7 @@ const FamilyEconomyApp = () => {
 // ============ SIMPLE CARD COMPONENTS ============
 
 const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
-    const isCompleted = chore.completedToday || chore.completed;
+    const isCompleted = chore.completed;
     const isPending = chore.pendingApproval;
 
     return (
@@ -1555,19 +1555,29 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
 
 const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
     const isLocked = job.isLocked;
-    const completionsToday = job.completions?.filter(c => {
-        const today = new Date().toDateString();
-        return new Date(c.date).toDateString() === today;
-    }).length || 0;
+
+    // Count completions for current period (uses timestamp, not date)
+    // For daily jobs: count today's completions
+    // For weekly jobs: count all completions since last reset (stored in completions array)
+    const completionCount = job.completions?.filter(c => {
+        if (job.recurrence === RECURRENCE_TYPE.DAILY) {
+            const today = new Date().toDateString();
+            return new Date(c.timestamp).toDateString() === today;
+        } else {
+            // Weekly jobs - all completions in array are current period (reset clears them)
+            return true;
+        }
+    }).reduce((sum, c) => sum + (c.count || 1), 0) || 0;
+
     const maxCompletions = job.maxCompletionsPerPeriod;
-    const isMaxedOut = maxCompletions && completionsToday >= maxCompletions;
-    const hasCompletedOnce = completionsToday > 0 && !job.allowMultipleCompletions;
+    const isMaxedOut = maxCompletions && completionCount >= maxCompletions;
+    const hasCompletedOnce = completionCount > 0 && !job.allowMultipleCompletions;
 
     // Job is "done" if it's single-completion and completed, or maxed out for multi-completion
     const isDone = hasCompletedOnce || isMaxedOut;
 
     // Can only complete if not locked, not done, and (no max or under max)
-    const canComplete = !isLocked && !isDone && (!maxCompletions || completionsToday < maxCompletions);
+    const canComplete = !isLocked && !isDone && (!maxCompletions || completionCount < maxCompletions);
 
     return (
         <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
@@ -1582,7 +1592,7 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
                     <div className="text-sm text-gray-500">
                         {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
                         {job.allowMultipleCompletions && maxCompletions &&
-                            ` • ${completionsToday}/${maxCompletions} today`
+                            ` • ${completionCount}/${maxCompletions} ${job.recurrence === RECURRENCE_TYPE.DAILY ? 'today' : 'this week'}`
                         }
                     </div>
                     {isLocked && (

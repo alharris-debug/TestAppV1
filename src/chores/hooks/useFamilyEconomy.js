@@ -564,7 +564,7 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
         }
 
         soundSystem?.purchase?.();
-        return { success: true, earned: job.value * count };
+        return { success: true, earned: job.value * count, jobTitle: job.title };
     }, [jobs, chores, weeklyResetDay, users, updateUser, soundSystem]);
 
     /**
