@@ -86,9 +86,12 @@ const FamilyEconomyApp = () => {
     const [showParentReview, setShowParentReview] = useState(false);
 
     // Form State
-    const [choreForm, setChoreForm] = useState({ ...DEFAULT_CHORE_FORM });
-    const [jobForm, setJobForm] = useState({ ...DEFAULT_JOB_FORM });
+    const [choreForm, setChoreForm] = useState({ ...DEFAULT_CHORE_FORM, assignTo: '' });
+    const [jobForm, setJobForm] = useState({ ...DEFAULT_JOB_FORM, assignTo: '' });
     const [userForm, setUserForm] = useState({ name: '', avatar: '👤', role: 'child' });
+
+    // Get child users for assignment dropdowns
+    const childUsers = economy.users.filter(u => u.role === 'child');
 
     // Reset form when opening editors
     const openChoreEditor = (chore = null) => {
@@ -97,11 +100,12 @@ const FamilyEconomyApp = () => {
                 name: chore.name || '',
                 icon: chore.icon || '📋',
                 points: chore.points || 5,
-                repeatType: chore.recurrence || RECURRENCE_TYPE.DAILY
+                repeatType: chore.recurrence || RECURRENCE_TYPE.DAILY,
+                assignTo: chore.userId || ''
             });
             setEditingChore(chore);
         } else {
-            setChoreForm({ ...DEFAULT_CHORE_FORM });
+            setChoreForm({ ...DEFAULT_CHORE_FORM, assignTo: childUsers[0]?.id || '' });
             setEditingChore(null);
         }
         setShowChoreEditor(true);
@@ -118,11 +122,12 @@ const FamilyEconomyApp = () => {
                 allowMultipleCompletions: job.allowMultipleCompletions || false,
                 maxCompletionsPerPeriod: job.maxCompletionsPerPeriod || null,
                 requiresApproval: job.requiresApproval !== false,
-                description: job.description || ''
+                description: job.description || '',
+                assignTo: job.userId || ''
             });
             setEditingJob(job);
         } else {
-            setJobForm({ ...DEFAULT_JOB_FORM });
+            setJobForm({ ...DEFAULT_JOB_FORM, assignTo: childUsers[0]?.id || '' });
             setEditingJob(null);
         }
         setShowJobEditor(true);
@@ -146,6 +151,7 @@ const FamilyEconomyApp = () => {
     // Save handlers
     const handleSaveChore = () => {
         if (!choreForm.name.trim()) return;
+        if (!choreForm.assignTo) return; // Must have assigned user
 
         const choreData = {
             name: choreForm.name,
@@ -155,15 +161,18 @@ const FamilyEconomyApp = () => {
         };
 
         if (editingChore) {
-            economy.updateChore(editingChore.id, choreData);
+            // Update existing chore
+            economy.updateChore(editingChore.id, { ...choreData, userId: choreForm.assignTo });
         } else {
-            economy.addChore(choreData);
+            // Create new chore for the selected user
+            economy.addChore(choreData, choreForm.assignTo);
         }
         setShowChoreEditor(false);
     };
 
     const handleSaveJob = () => {
         if (!jobForm.title.trim()) return;
+        if (!jobForm.assignTo) return; // Must have assigned user
 
         const jobData = {
             title: jobForm.title,
@@ -178,9 +187,11 @@ const FamilyEconomyApp = () => {
         };
 
         if (editingJob) {
-            economy.updateJob(editingJob.id, jobData);
+            // Update existing job
+            economy.updateJob(editingJob.id, { ...jobData, userId: jobForm.assignTo });
         } else {
-            economy.addJob(jobData);
+            // Create new job for the selected user
+            economy.addJob(jobData, jobForm.assignTo);
         }
         setShowJobEditor(false);
     };
@@ -204,9 +215,14 @@ const FamilyEconomyApp = () => {
 
     // Get current user's data
     const activeUser = economy.activeUser;
+    const isParent = activeUser?.role === 'parent';
     const userChores = economy.activeUserChores || [];
     const userJobs = economy.activeUserJobs || [];
     const userTransactions = economy.activeUserTransactions || [];
+
+    // Management modal state (unified for chores and jobs)
+    const [showManagement, setShowManagement] = useState(false);
+    const [managementTab, setManagementTab] = useState('chores'); // 'chores' or 'jobs'
 
     // Handle chore completion
     const handleCompleteChore = (choreId) => {
@@ -249,7 +265,7 @@ const FamilyEconomyApp = () => {
                             <div className="text-right">
                                 <div className="text-white/60 text-xs">Balance</div>
                                 <div className="text-white font-bold text-xl">
-                                    {formatCents(activeUser?.balance || 0)}
+                                    {formatCents(activeUser?.cashBalance || 0)}
                                 </div>
                                 {(activeUser?.pendingBalance || 0) > 0 && (
                                     <div className="text-yellow-300 text-xs">
@@ -269,10 +285,10 @@ const FamilyEconomyApp = () => {
                     </div>
 
                     {/* Streak Display */}
-                    {activeUser?.streak > 0 && (
+                    {activeUser?.currentStreak > 0 && (
                         <div className="mt-2 flex items-center justify-center gap-2 text-orange-300">
                             <span className="text-xl">🔥</span>
-                            <span className="font-bold">{activeUser.streak} Day Streak!</span>
+                            <span className="font-bold">{activeUser.currentStreak} Day Streak!</span>
                         </div>
                     )}
                 </div>
@@ -366,13 +382,18 @@ const FamilyEconomyApp = () => {
                             </div>
                         </div>
 
-                        {/* Add Chore Button (Parent Only) */}
-                        <button
-                            onClick={() => requireParentAccess(() => openChoreEditor())}
-                            className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
-                        >
-                            <span>➕</span> Add Chore (Parent)
-                        </button>
+                        {/* Manage Chores Button (Parent Only) */}
+                        {isParent && (
+                            <button
+                                onClick={() => requireParentAccess(() => {
+                                    setManagementTab('chores');
+                                    setShowManagement(true);
+                                })}
+                                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
+                            >
+                                <span>⚙️</span> Manage Chores & Jobs
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -397,17 +418,22 @@ const FamilyEconomyApp = () => {
 
                         {userJobs.length === 0 && (
                             <div className="text-white/60 text-center py-8">
-                                No jobs available yet. Parents can add jobs!
+                                No jobs available yet.{!isParent && ' Ask a parent to add some!'}
                             </div>
                         )}
 
-                        {/* Add Job Button (Parent Only) */}
-                        <button
-                            onClick={() => requireParentAccess(() => openJobEditor())}
-                            className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
-                        >
-                            <span>➕</span> Add Job (Parent)
-                        </button>
+                        {/* Manage Jobs Button (Parent Only) */}
+                        {isParent && (
+                            <button
+                                onClick={() => requireParentAccess(() => {
+                                    setManagementTab('jobs');
+                                    setShowManagement(true);
+                                })}
+                                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
+                            >
+                                <span>⚙️</span> Manage Chores & Jobs
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -421,7 +447,7 @@ const FamilyEconomyApp = () => {
                                 <div>
                                     <div className="text-gray-500 text-sm">Available</div>
                                     <div className="text-2xl font-bold text-green-600">
-                                        {formatCents(activeUser?.balance || 0)}
+                                        {formatCents(activeUser?.cashBalance || 0)}
                                     </div>
                                 </div>
                                 <div>
@@ -486,7 +512,7 @@ const FamilyEconomyApp = () => {
                                         <div className="font-semibold">{user.name}</div>
                                         <div className="text-sm text-gray-500">{user.role}</div>
                                     </div>
-                                    <div className="text-green-600 font-bold">{formatCents(user.balance)}</div>
+                                    <div className="text-green-600 font-bold">{formatCents(user.cashBalance)}</div>
                                 </button>
                             ))}
                         </div>
@@ -563,6 +589,24 @@ const FamilyEconomyApp = () => {
                                     <option value={RECURRENCE_TYPE.WEEKLY}>Weekly</option>
                                 </select>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                                <select
+                                    value={choreForm.assignTo}
+                                    onChange={(e) => setChoreForm({...choreForm, assignTo: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                >
+                                    <option value="">Select a child...</option>
+                                    {childUsers.map(user => (
+                                        <option key={user.id} value={user.id}>
+                                            {user.avatar} {user.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {childUsers.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">Add a child first before creating chores.</p>
+                                )}
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
@@ -573,7 +617,12 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveChore}
-                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                                disabled={!choreForm.assignTo || childUsers.length === 0}
+                                className={`flex-1 py-3 rounded-xl font-semibold ${
+                                    choreForm.assignTo && childUsers.length > 0
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
                             >
                                 Save
                             </button>
@@ -682,6 +731,24 @@ const FamilyEconomyApp = () => {
                                     Requires parent approval
                                 </label>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                                <select
+                                    value={jobForm.assignTo}
+                                    onChange={(e) => setJobForm({...jobForm, assignTo: e.target.value})}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                >
+                                    <option value="">Select a child...</option>
+                                    {childUsers.map(user => (
+                                        <option key={user.id} value={user.id}>
+                                            {user.avatar} {user.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {childUsers.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">Add a child first before creating jobs.</p>
+                                )}
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
@@ -692,7 +759,12 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveJob}
-                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                                disabled={!jobForm.assignTo || childUsers.length === 0}
+                                className={`flex-1 py-3 rounded-xl font-semibold ${
+                                    jobForm.assignTo && childUsers.length > 0
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
                             >
                                 Save
                             </button>
@@ -814,6 +886,152 @@ const FamilyEconomyApp = () => {
                         )}
                         <button
                             onClick={() => setShowParentReview(false)}
+                            className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Unified Management Modal */}
+            {showManagement && (
+                <div className="modal-overlay" onClick={() => setShowManagement(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}>
+                        <h2 className="text-xl font-bold text-purple-600 mb-4">
+                            ⚙️ Manage Chores & Jobs
+                        </h2>
+
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => setManagementTab('chores')}
+                                className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
+                                    managementTab === 'chores'
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                📋 Chores
+                            </button>
+                            <button
+                                onClick={() => setManagementTab('jobs')}
+                                className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
+                                    managementTab === 'jobs'
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                💼 Jobs
+                            </button>
+                        </div>
+
+                        {/* Chores Tab Content */}
+                        {managementTab === 'chores' && (
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Create chores and assign them to family members.
+                                </p>
+
+                                {/* Add New Chore Button */}
+                                <button
+                                    onClick={() => {
+                                        setShowManagement(false);
+                                        openChoreEditor();
+                                    }}
+                                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
+                                >
+                                    <span>➕</span> Create New Chore
+                                </button>
+
+                                {/* Existing Chores List */}
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700">All Chores:</h4>
+                                    {economy.chores.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No chores created yet.</p>
+                                    ) : (
+                                        economy.chores.map(chore => {
+                                            const assignedUser = economy.users.find(u => u.id === chore.userId);
+                                            return (
+                                                <div key={chore.id} className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
+                                                    <span className="text-2xl">{chore.icon}</span>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{chore.name}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {chore.recurrence} • Assigned to: {assignedUser?.name || 'Unknown'}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowManagement(false);
+                                                            openChoreEditor(chore);
+                                                        }}
+                                                        className="text-purple-600 hover:text-purple-800 px-2"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Jobs Tab Content */}
+                        {managementTab === 'jobs' && (
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Create paid jobs and assign them to family members.
+                                </p>
+
+                                {/* Add New Job Button */}
+                                <button
+                                    onClick={() => {
+                                        setShowManagement(false);
+                                        openJobEditor();
+                                    }}
+                                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
+                                >
+                                    <span>➕</span> Create New Job
+                                </button>
+
+                                {/* Existing Jobs List */}
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700">All Jobs:</h4>
+                                    {economy.jobs.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No jobs created yet.</p>
+                                    ) : (
+                                        economy.jobs.map(job => {
+                                            const assignedUser = economy.users.find(u => u.id === job.userId);
+                                            return (
+                                                <div key={job.id} className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
+                                                    <span className="text-2xl">{job.icon || '💼'}</span>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{job.title}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {formatCents(job.value)} • {job.recurrence} • {assignedUser?.name || 'Unknown'}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowManagement(false);
+                                                            openJobEditor(job);
+                                                        }}
+                                                        className="text-purple-600 hover:text-purple-800 px-2"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => setShowManagement(false)}
                             className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
                         >
                             Close
