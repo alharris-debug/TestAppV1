@@ -406,17 +406,19 @@ const FamilyEconomyApp = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            {/* Parent Review Button in Header */}
-                            {isParent && pendingApprovalsCount > 0 && (
+                            {/* Parent Review Button in Header - always show for parents */}
+                            {isParent && (
                                 <button
                                     onClick={() => requireParentAccess(() => setShowParentReview(true))}
-                                    className="relative bg-yellow-500 hover:bg-yellow-400 text-white rounded-full p-2 transition-all"
-                                    title="Review pending approvals"
+                                    className={`relative ${pendingApprovalsCount > 0 ? 'bg-yellow-500 hover:bg-yellow-400' : 'bg-gray-400 hover:bg-gray-500'} text-white rounded-full p-2 transition-all`}
+                                    title={pendingApprovalsCount > 0 ? "Review pending approvals" : "No pending approvals"}
                                 >
                                     <span className="text-xl">👨‍👩‍👧</span>
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                        {pendingApprovalsCount}
-                                    </span>
+                                    {pendingApprovalsCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                            {pendingApprovalsCount}
+                                        </span>
+                                    )}
                                 </button>
                             )}
 
@@ -751,12 +753,11 @@ const FamilyEconomyApp = () => {
                                                 key={user.id}
                                                 type="button"
                                                 onClick={() => toggleChoreAssignment(user.id)}
-                                                disabled={editingChore && choreForm.assignTo[0] !== user.id}
                                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                                                     choreForm.assignTo.includes(user.id)
                                                         ? 'bg-purple-500 text-white'
                                                         : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
-                                                } ${editingChore && choreForm.assignTo[0] !== user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                }`}
                                             >
                                                 <span>{user.avatar}</span>
                                                 <span>{user.name}</span>
@@ -766,7 +767,7 @@ const FamilyEconomyApp = () => {
                                     </div>
                                 )}
                                 {editingChore && (
-                                    <p className="text-xs text-gray-500 mt-1">When editing, assignment cannot be changed.</p>
+                                    <p className="text-xs text-gray-500 mt-1">Select a different child to reassign this chore.</p>
                                 )}
                             </div>
                         </div>
@@ -906,12 +907,11 @@ const FamilyEconomyApp = () => {
                                                 key={user.id}
                                                 type="button"
                                                 onClick={() => toggleJobAssignment(user.id)}
-                                                disabled={editingJob && jobForm.assignTo[0] !== user.id}
                                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                                                     jobForm.assignTo.includes(user.id)
                                                         ? 'bg-purple-500 text-white'
                                                         : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
-                                                } ${editingJob && jobForm.assignTo[0] !== user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                }`}
                                             >
                                                 <span>{user.avatar}</span>
                                                 <span>{user.name}</span>
@@ -921,7 +921,7 @@ const FamilyEconomyApp = () => {
                                     </div>
                                 )}
                                 {editingJob && (
-                                    <p className="text-xs text-gray-500 mt-1">When editing, assignment cannot be changed.</p>
+                                    <p className="text-xs text-gray-500 mt-1">Select a different child to reassign this job.</p>
                                 )}
                             </div>
                         </div>
@@ -1501,7 +1501,7 @@ const FamilyEconomyApp = () => {
 // ============ SIMPLE CARD COMPONENTS ============
 
 const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
-    const isCompleted = chore.completedToday || chore.completed;
+    const isCompleted = chore.completed;
     const isPending = chore.pendingApproval;
 
     return (
@@ -1523,10 +1523,10 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
                     {isParent && (
                         <button
                             onClick={onEdit}
-                            className="text-gray-400 hover:text-purple-600 p-2"
+                            className="bg-purple-100 hover:bg-purple-200 text-purple-600 px-3 py-2 rounded-lg font-semibold text-sm"
                             title="Edit"
                         >
-                            ✏️
+                            ✏️ Edit
                         </button>
                     )}
                     {!isCompleted && !isPending && (
@@ -1555,17 +1555,29 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
 
 const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
     const isLocked = job.isLocked;
-    const completionsToday = job.completions?.filter(c => {
-        const today = new Date().toDateString();
-        return new Date(c.date).toDateString() === today;
-    }).length || 0;
+
+    // Count completions for current period (uses timestamp, not date)
+    // For daily jobs: count today's completions
+    // For weekly jobs: count all completions since last reset (stored in completions array)
+    const completionCount = job.completions?.filter(c => {
+        if (job.recurrence === RECURRENCE_TYPE.DAILY) {
+            const today = new Date().toDateString();
+            return new Date(c.timestamp).toDateString() === today;
+        } else {
+            // Weekly jobs - all completions in array are current period (reset clears them)
+            return true;
+        }
+    }).reduce((sum, c) => sum + (c.count || 1), 0) || 0;
+
     const maxCompletions = job.maxCompletionsPerPeriod;
-    const canComplete = !isLocked && (!maxCompletions || completionsToday < maxCompletions);
-    const isMaxedOut = maxCompletions && completionsToday >= maxCompletions;
-    const hasCompletedOnce = completionsToday > 0 && !job.allowMultipleCompletions;
+    const isMaxedOut = maxCompletions && completionCount >= maxCompletions;
+    const hasCompletedOnce = completionCount > 0 && !job.allowMultipleCompletions;
 
     // Job is "done" if it's single-completion and completed, or maxed out for multi-completion
     const isDone = hasCompletedOnce || isMaxedOut;
+
+    // Can only complete if not locked, not done, and (no max or under max)
+    const canComplete = !isLocked && !isDone && (!maxCompletions || completionCount < maxCompletions);
 
     return (
         <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
@@ -1580,7 +1592,7 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
                     <div className="text-sm text-gray-500">
                         {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
                         {job.allowMultipleCompletions && maxCompletions &&
-                            ` • ${completionsToday}/${maxCompletions} today`
+                            ` • ${completionCount}/${maxCompletions} ${job.recurrence === RECURRENCE_TYPE.DAILY ? 'today' : 'this week'}`
                         }
                     </div>
                     {isLocked && (
@@ -1593,10 +1605,10 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
                     {isParent && (
                         <button
                             onClick={onEdit}
-                            className="text-gray-400 hover:text-purple-600 p-2"
+                            className="bg-purple-100 hover:bg-purple-200 text-purple-600 px-3 py-2 rounded-lg font-semibold text-sm"
                             title="Edit"
                         >
-                            ✏️
+                            ✏️ Edit
                         </button>
                     )}
                     <div className="text-right">
@@ -1606,9 +1618,9 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
                         {canComplete ? (
                             <button
                                 onClick={() => onComplete(1)}
-                                className="mt-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold"
+                                className="mt-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold"
                             >
-                                💰 Earn
+                                ✓ Done
                             </button>
                         ) : isDone ? (
                             <span className="mt-1 inline-block bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-medium">
