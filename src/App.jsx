@@ -222,7 +222,25 @@ const FamilyEconomyApp = () => {
 
     // Management modal state (unified for chores and jobs)
     const [showManagement, setShowManagement] = useState(false);
-    const [managementTab, setManagementTab] = useState('chores'); // 'chores' or 'jobs'
+    const [managementTab, setManagementTab] = useState('chores'); // 'chores', 'jobs', or 'templates'
+
+    // Template state
+    const [selectedUsersForTemplate, setSelectedUsersForTemplate] = useState([]);
+    const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+    const [templateType, setTemplateType] = useState('chore'); // 'chore' or 'job'
+    const [editingTemplate, setEditingTemplate] = useState(null);
+    const [templateForm, setTemplateForm] = useState({
+        name: '',
+        title: '',
+        icon: '📋',
+        points: 5,
+        value: 100,
+        recurrence: RECURRENCE_TYPE.DAILY,
+        unlockConditions: { dailyChores: 0, weeklyChores: 0 },
+        allowMultipleCompletions: false,
+        maxCompletionsPerPeriod: null,
+        requiresApproval: true
+    });
 
     // Handle chore completion
     const handleCompleteChore = (choreId) => {
@@ -238,6 +256,109 @@ const FamilyEconomyApp = () => {
         if (result?.success && result?.earned) {
             showEarning(result.earned, result.jobTitle);
         }
+    };
+
+    // Template helpers
+    const openTemplateEditor = (type, template = null) => {
+        setTemplateType(type);
+        if (template) {
+            setEditingTemplate(template);
+            if (type === 'chore') {
+                setTemplateForm({
+                    name: template.name || '',
+                    icon: template.icon || '📋',
+                    points: template.points || 5,
+                    recurrence: template.recurrence || RECURRENCE_TYPE.DAILY,
+                    title: '',
+                    value: 100,
+                    unlockConditions: { dailyChores: 0, weeklyChores: 0 },
+                    allowMultipleCompletions: false,
+                    maxCompletionsPerPeriod: null,
+                    requiresApproval: true
+                });
+            } else {
+                setTemplateForm({
+                    name: '',
+                    title: template.title || '',
+                    icon: template.icon || '💼',
+                    value: template.value || 100,
+                    recurrence: template.recurrence || RECURRENCE_TYPE.DAILY,
+                    unlockConditions: template.unlockConditions || { dailyChores: 0, weeklyChores: 0 },
+                    allowMultipleCompletions: template.allowMultipleCompletions || false,
+                    maxCompletionsPerPeriod: template.maxCompletionsPerPeriod || null,
+                    requiresApproval: template.requiresApproval !== false,
+                    points: 5
+                });
+            }
+        } else {
+            setEditingTemplate(null);
+            setTemplateForm({
+                name: '',
+                title: '',
+                icon: type === 'chore' ? '📋' : '💼',
+                points: 5,
+                value: 100,
+                recurrence: RECURRENCE_TYPE.DAILY,
+                unlockConditions: { dailyChores: 0, weeklyChores: 0 },
+                allowMultipleCompletions: false,
+                maxCompletionsPerPeriod: null,
+                requiresApproval: true
+            });
+        }
+        setShowTemplateEditor(true);
+    };
+
+    const handleSaveTemplate = () => {
+        if (templateType === 'chore') {
+            if (!templateForm.name.trim()) return;
+            const templateData = {
+                name: templateForm.name,
+                icon: templateForm.icon,
+                points: templateForm.points,
+                recurrence: templateForm.recurrence
+            };
+            if (editingTemplate) {
+                economy.updateChoreTemplate(editingTemplate.id, templateData);
+            } else {
+                economy.addChoreTemplate(templateData);
+            }
+        } else {
+            if (!templateForm.title.trim()) return;
+            const templateData = {
+                title: templateForm.title,
+                icon: templateForm.icon,
+                value: templateForm.value,
+                recurrence: templateForm.recurrence,
+                unlockConditions: templateForm.unlockConditions,
+                allowMultipleCompletions: templateForm.allowMultipleCompletions,
+                maxCompletionsPerPeriod: templateForm.maxCompletionsPerPeriod,
+                requiresApproval: templateForm.requiresApproval
+            };
+            if (editingTemplate) {
+                economy.updateJobTemplate(editingTemplate.id, templateData);
+            } else {
+                economy.addJobTemplate(templateData);
+            }
+        }
+        setShowTemplateEditor(false);
+    };
+
+    const handleApplyTemplate = (template, type) => {
+        if (selectedUsersForTemplate.length === 0) return;
+        if (type === 'chore') {
+            economy.applyChoreTemplate(template.id, selectedUsersForTemplate);
+        } else {
+            economy.applyJobTemplate(template.id, selectedUsersForTemplate, activeUser?.id);
+        }
+        setSelectedUsersForTemplate([]);
+    };
+
+    const toggleUserSelection = (userId) => {
+        setSelectedUsersForTemplate(prev =>
+            prev.includes(userId)
+                ? prev.filter(id => id !== userId)
+                : [...prev, userId]
+        );
     };
 
     // Calculate pending approvals count
@@ -924,6 +1045,16 @@ const FamilyEconomyApp = () => {
                             >
                                 💼 Jobs
                             </button>
+                            <button
+                                onClick={() => setManagementTab('templates')}
+                                className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
+                                    managementTab === 'templates'
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                📑 Templates
+                            </button>
                         </div>
 
                         {/* Chores Tab Content */}
@@ -1030,12 +1161,279 @@ const FamilyEconomyApp = () => {
                             </div>
                         )}
 
+                        {/* Templates Tab Content */}
+                        {managementTab === 'templates' && (
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Create templates and apply them to multiple children at once.
+                                </p>
+
+                                {/* Create Template Buttons */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => openTemplateEditor('chore')}
+                                        className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-sm"
+                                    >
+                                        + Chore Template
+                                    </button>
+                                    <button
+                                        onClick={() => openTemplateEditor('job')}
+                                        className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold text-sm"
+                                    >
+                                        + Job Template
+                                    </button>
+                                </div>
+
+                                {/* Child User Selection */}
+                                <div className="bg-blue-50 rounded-lg p-3">
+                                    <h4 className="font-semibold text-gray-700 mb-2">Select Children to Apply Templates:</h4>
+                                    {childUsers.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No children added yet.</p>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2">
+                                            {childUsers.map(user => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => toggleUserSelection(user.id)}
+                                                    className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${
+                                                        selectedUsersForTemplate.includes(user.id)
+                                                            ? 'bg-purple-500 text-white'
+                                                            : 'bg-white text-gray-700 border border-gray-300'
+                                                    }`}
+                                                >
+                                                    {user.avatar} {user.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Chore Templates */}
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700">Chore Templates:</h4>
+                                    {(economy.choreTemplates || []).length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No chore templates yet.</p>
+                                    ) : (
+                                        (economy.choreTemplates || []).map(template => (
+                                            <div key={template.id} className="bg-gray-50 rounded-lg p-3">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">{template.icon}</span>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{template.name}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {template.recurrence} • {template.points} gems
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => openTemplateEditor('chore', template)}
+                                                        className="text-purple-600 hover:text-purple-800 px-2"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => economy.deleteChoreTemplate(template.id)}
+                                                        className="text-red-500 hover:text-red-700 px-2"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleApplyTemplate(template, 'chore')}
+                                                    disabled={selectedUsersForTemplate.length === 0}
+                                                    className={`mt-2 w-full py-1 rounded-lg text-sm font-medium ${
+                                                        selectedUsersForTemplate.length > 0
+                                                            ? 'bg-purple-500 text-white hover:bg-purple-600'
+                                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                    }`}
+                                                >
+                                                    Apply to {selectedUsersForTemplate.length} selected
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Job Templates */}
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700">Job Templates:</h4>
+                                    {(economy.jobTemplates || []).length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No job templates yet.</p>
+                                    ) : (
+                                        (economy.jobTemplates || []).map(template => (
+                                            <div key={template.id} className="bg-gray-50 rounded-lg p-3">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">{template.icon}</span>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{template.title}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {formatCents(template.value)} • {template.recurrence}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => openTemplateEditor('job', template)}
+                                                        className="text-purple-600 hover:text-purple-800 px-2"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => economy.deleteJobTemplate(template.id)}
+                                                        className="text-red-500 hover:text-red-700 px-2"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleApplyTemplate(template, 'job')}
+                                                    disabled={selectedUsersForTemplate.length === 0}
+                                                    className={`mt-2 w-full py-1 rounded-lg text-sm font-medium ${
+                                                        selectedUsersForTemplate.length > 0
+                                                            ? 'bg-green-500 text-white hover:bg-green-600'
+                                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                    }`}
+                                                >
+                                                    Apply to {selectedUsersForTemplate.length} selected
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         <button
                             onClick={() => setShowManagement(false)}
                             className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
                         >
                             Close
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Template Editor Modal */}
+            {showTemplateEditor && (
+                <div className="modal-overlay" onClick={() => setShowTemplateEditor(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-purple-600 mb-4">
+                            {editingTemplate ? '✏️ Edit' : '➕ Create'} {templateType === 'chore' ? 'Chore' : 'Job'} Template
+                        </h2>
+                        <div className="space-y-4">
+                            {templateType === 'chore' ? (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                        <input
+                                            type="text"
+                                            value={templateForm.name}
+                                            onChange={(e) => setTemplateForm({...templateForm, name: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="e.g., Make bed"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {Object.entries(CHORE_ICONS).map(([key, icon]) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => setTemplateForm({...templateForm, icon})}
+                                                    className={`text-2xl p-2 rounded-lg ${templateForm.icon === icon ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-gray-100'}`}
+                                                >
+                                                    {icon}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                                        <select
+                                            value={templateForm.recurrence}
+                                            onChange={(e) => setTemplateForm({...templateForm, recurrence: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        >
+                                            <option value={RECURRENCE_TYPE.DAILY}>Daily</option>
+                                            <option value={RECURRENCE_TYPE.WEEKLY}>Weekly</option>
+                                        </select>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                        <input
+                                            type="text"
+                                            value={templateForm.title}
+                                            onChange={(e) => setTemplateForm({...templateForm, title: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="e.g., Vacuum living room"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Value ($)</label>
+                                        <input
+                                            type="number"
+                                            step="0.25"
+                                            min="0"
+                                            value={(templateForm.value / 100).toFixed(2)}
+                                            onChange={(e) => setTemplateForm({...templateForm, value: Math.round(parseFloat(e.target.value || 0) * 100)})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                                        <select
+                                            value={templateForm.recurrence}
+                                            onChange={(e) => setTemplateForm({...templateForm, recurrence: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        >
+                                            <option value={RECURRENCE_TYPE.DAILY}>Daily</option>
+                                            <option value={RECURRENCE_TYPE.WEEKLY}>Weekly</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Unlock after completing # daily chores
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={templateForm.unlockConditions.dailyChores}
+                                            onChange={(e) => setTemplateForm({
+                                                ...templateForm,
+                                                unlockConditions: {...templateForm.unlockConditions, dailyChores: parseInt(e.target.value) || 0}
+                                            })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="templateRequiresApproval"
+                                            checked={templateForm.requiresApproval}
+                                            onChange={(e) => setTemplateForm({...templateForm, requiresApproval: e.target.checked})}
+                                            className="w-5 h-5 rounded"
+                                        />
+                                        <label htmlFor="templateRequiresApproval" className="text-sm font-medium text-gray-700">
+                                            Requires parent approval
+                                        </label>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setShowTemplateEditor(false)}
+                                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveTemplate}
+                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                            >
+                                Save Template
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

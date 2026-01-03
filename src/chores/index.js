@@ -48,7 +48,9 @@ export {
     createDefaultUser,
     createDefaultJob,
     createDefaultChore,
-    createTransaction
+    createTransaction,
+    createChoreTemplate,
+    createJobTemplate
 } from './schema.js';
 
 // Hooks

@@ -19,6 +19,8 @@ import {
     createDefaultJob,
     createDefaultChore,
     createTransaction,
+    createChoreTemplate,
+    createJobTemplate,
     createDefaultFamilyState,
     FAMILY_STORAGE_KEY,
     DEFAULT_WEEKLY_RESET_DAY
@@ -59,6 +61,8 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
     const [activeUserId, setActiveUserId] = useState(initialState.activeUserId);
     const [jobs, setJobs] = useState(initialState.jobs || []);
     const [chores, setChores] = useState(initialState.chores || []);
+    const [choreTemplates, setChoreTemplates] = useState(initialState.choreTemplates || []);
+    const [jobTemplates, setJobTemplates] = useState(initialState.jobTemplates || []);
     const [transactions, setTransactions] = useState(initialState.transactions || []);
     const [redemptionItems, setRedemptionItems] = useState(initialState.redemptionItems || []);
     const [parentPassword, setParentPassword] = useState(initialState.parentPassword);
@@ -343,6 +347,131 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
         soundSystem?.taskComplete?.();
     }, [chores, users, soundSystem]);
 
+    // ========== TEMPLATE ACTIONS ==========
+
+    /**
+     * Add a new chore template
+     */
+    const addChoreTemplate = useCallback((templateData) => {
+        const newTemplate = {
+            ...createChoreTemplate(),
+            ...templateData
+        };
+        setChoreTemplates(prev => [...prev, newTemplate]);
+        soundSystem?.buttonClick?.();
+        return newTemplate;
+    }, [soundSystem]);
+
+    /**
+     * Update a chore template
+     */
+    const updateChoreTemplate = useCallback((templateId, updates) => {
+        setChoreTemplates(prev =>
+            prev.map(t => t.id === templateId ? { ...t, ...updates } : t)
+        );
+        soundSystem?.buttonClick?.();
+    }, [soundSystem]);
+
+    /**
+     * Delete a chore template
+     */
+    const deleteChoreTemplate = useCallback((templateId) => {
+        setChoreTemplates(prev => prev.filter(t => t.id !== templateId));
+        soundSystem?.buttonClick?.();
+    }, [soundSystem]);
+
+    /**
+     * Apply a chore template to one or more users
+     */
+    const applyChoreTemplate = useCallback((templateId, userIds) => {
+        const template = choreTemplates.find(t => t.id === templateId);
+        if (!template) return [];
+
+        const targetUserIds = Array.isArray(userIds) ? userIds : [userIds];
+        const createdChores = [];
+
+        targetUserIds.forEach(userId => {
+            const newChore = {
+                ...createDefaultChore(userId),
+                name: template.name,
+                icon: template.icon,
+                points: template.points,
+                recurrence: template.recurrence,
+                templateId: template.id
+            };
+            createdChores.push(newChore);
+        });
+
+        setChores(prev => [...prev, ...createdChores]);
+        soundSystem?.taskComplete?.();
+        return createdChores;
+    }, [choreTemplates, soundSystem]);
+
+    /**
+     * Add a new job template
+     */
+    const addJobTemplate = useCallback((templateData) => {
+        const newTemplate = {
+            ...createJobTemplate(),
+            ...templateData
+        };
+        setJobTemplates(prev => [...prev, newTemplate]);
+        soundSystem?.buttonClick?.();
+        return newTemplate;
+    }, [soundSystem]);
+
+    /**
+     * Update a job template
+     */
+    const updateJobTemplate = useCallback((templateId, updates) => {
+        setJobTemplates(prev =>
+            prev.map(t => t.id === templateId ? { ...t, ...updates } : t)
+        );
+        soundSystem?.buttonClick?.();
+    }, [soundSystem]);
+
+    /**
+     * Delete a job template
+     */
+    const deleteJobTemplate = useCallback((templateId) => {
+        setJobTemplates(prev => prev.filter(t => t.id !== templateId));
+        soundSystem?.buttonClick?.();
+    }, [soundSystem]);
+
+    /**
+     * Apply a job template to one or more users
+     */
+    const applyJobTemplate = useCallback((templateId, userIds, createdBy) => {
+        const template = jobTemplates.find(t => t.id === templateId);
+        if (!template) return [];
+
+        const targetUserIds = Array.isArray(userIds) ? userIds : [userIds];
+        const createdJobs = [];
+
+        targetUserIds.forEach(userId => {
+            const newJob = {
+                ...createDefaultJob(userId, createdBy),
+                title: template.title,
+                description: template.description,
+                icon: template.icon,
+                value: template.value,
+                recurrence: template.recurrence,
+                unlockConditions: { ...template.unlockConditions },
+                allowMultipleCompletions: template.allowMultipleCompletions,
+                maxCompletionsPerPeriod: template.maxCompletionsPerPeriod,
+                requiresApproval: template.requiresApproval,
+                templateId: template.id
+            };
+            // Set initial lock status
+            const lockedJob = updateJobLockStatus(newJob, chores, weeklyResetDay);
+            createdJobs.push(lockedJob);
+        });
+
+        setJobs(prev => [...prev, ...createdJobs]);
+        soundSystem?.taskComplete?.();
+        return createdJobs;
+    }, [jobTemplates, chores, weeklyResetDay, soundSystem]);
+
     // ========== JOB ACTIONS ==========
 
     /**
@@ -581,12 +710,14 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
         activeUserId,
         jobs,
         chores,
+        choreTemplates,
+        jobTemplates,
         transactions,
         redemptionItems,
         parentPassword,
         settings,
         lastSaved: new Date().toISOString()
-    }), [users, activeUserId, jobs, chores, transactions, redemptionItems, parentPassword, settings]);
+    }), [users, activeUserId, jobs, chores, choreTemplates, jobTemplates, transactions, redemptionItems, parentPassword, settings]);
 
     /**
      * Save state to localStorage
@@ -609,7 +740,7 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
         }, 500); // Debounce saves
 
         return () => clearTimeout(timeoutId);
-    }, [users, activeUserId, jobs, chores, transactions, redemptionItems, parentPassword, settings, saveState]);
+    }, [users, activeUserId, jobs, chores, choreTemplates, jobTemplates, transactions, redemptionItems, parentPassword, settings, saveState]);
 
     // ========== RETURN ==========
 
@@ -622,6 +753,8 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
         childUsers,
         jobs,
         chores,
+        choreTemplates,
+        jobTemplates,
         transactions,
         redemptionItems,
         parentPassword,
@@ -662,6 +795,16 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
         approveJob,
         rejectJob,
 
+        // Template actions
+        addChoreTemplate,
+        updateChoreTemplate,
+        deleteChoreTemplate,
+        applyChoreTemplate,
+        addJobTemplate,
+        updateJobTemplate,
+        deleteJobTemplate,
+        applyJobTemplate,
+
         // Transaction actions
         redeemCash,
         adjustBalance,
@@ -701,6 +844,8 @@ export const loadFamilyEconomyState = () => {
         data.users = Array.isArray(data.users) ? data.users : [];
         data.jobs = Array.isArray(data.jobs) ? data.jobs : [];
         data.chores = Array.isArray(data.chores) ? data.chores : [];
+        data.choreTemplates = Array.isArray(data.choreTemplates) ? data.choreTemplates : [];
+        data.jobTemplates = Array.isArray(data.jobTemplates) ? data.jobTemplates : [];
         data.transactions = Array.isArray(data.transactions) ? data.transactions : [];
         data.redemptionItems = Array.isArray(data.redemptionItems) ? data.redemptionItems : [];
 
