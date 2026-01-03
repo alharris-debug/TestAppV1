@@ -309,6 +309,40 @@ export const createTransaction = (userId, type, amount, description) => ({
 });
 
 /**
+ * Default chore template (not assigned to a user)
+ * @returns {Object}
+ */
+export const createChoreTemplate = () => ({
+    id: `chore_template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    name: '',
+    icon: '📋',
+    points: 5,
+    recurrence: RECURRENCE_TYPE.DAILY,
+    createdAt: new Date().toISOString()
+});
+
+/**
+ * Default job template (not assigned to a user)
+ * @returns {Object}
+ */
+export const createJobTemplate = () => ({
+    id: `job_template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    title: '',
+    description: '',
+    icon: '✨',
+    value: 100, // $1.00 default
+    recurrence: RECURRENCE_TYPE.DAILY,
+    unlockConditions: {
+        dailyChores: 0,
+        weeklyChores: 0
+    },
+    allowMultipleCompletions: false,
+    maxCompletionsPerPeriod: null,
+    requiresApproval: true,
+    createdAt: new Date().toISOString()
+});
+
+/**
  * Default family state
  * @returns {FamilyState}
  */
@@ -318,6 +352,8 @@ export const createDefaultFamilyState = () => ({
     activeUserId: null,
     jobs: [],
     chores: [],
+    choreTemplates: [],
+    jobTemplates: [],
     transactions: [],
     redemptionItems: [],
     parentPassword: null,
