@@ -259,27 +259,39 @@ export const EarningToast = ({
     amount,
     description,
     visible,
-    onHide
+    onHide,
+    count = 1
 }) => {
+    const [animKey, setAnimKey] = useState(0);
+
     useEffect(() => {
         if (visible) {
-            const timer = setTimeout(onHide, 3000);
+            setAnimKey(prev => prev + 1); // Force re-animate on new earning
+            const timer = setTimeout(onHide, 3500);
             return () => clearTimeout(timer);
         }
-    }, [visible, onHide]);
+    }, [visible, amount, onHide]);
 
     if (!visible) return null;
 
     return (
-        <div className="fixed top-4 right-4 z-50 animate-slide-in">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-2xl shadow-lg flex items-center gap-3">
-                <span className="text-3xl">💵</span>
-                <div>
-                    <div className="text-xl font-bold">+{formatCents(amount)}</div>
+        <div key={animKey} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-slide-in">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-8 py-5 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[200px]">
+                <div className="text-4xl animate-bounce">💰</div>
+                <div className="text-center flex-1">
+                    <div className="text-3xl font-bold flex items-center justify-center gap-2">
+                        +{formatCents(amount)}
+                        {count > 1 && (
+                            <span className="bg-yellow-400 text-green-800 text-sm px-2 py-1 rounded-full font-bold">
+                                x{count}
+                            </span>
+                        )}
+                    </div>
                     {description && (
-                        <div className="text-sm text-green-100">{description}</div>
+                        <div className="text-sm text-green-100 mt-1">{description}</div>
                     )}
                 </div>
+                <div className="text-4xl animate-bounce" style={{ animationDelay: '0.1s' }}>💵</div>
             </div>
         </div>
     );
@@ -323,15 +335,24 @@ export const SpendingToast = ({
  * Provides easy access to money animations
  */
 export const useMoneyAnimations = (soundSystem) => {
-    const [earningToast, setEarningToast] = useState({ visible: false, amount: 0, description: '' });
+    const [earningToast, setEarningToast] = useState({ visible: false, amount: 0, description: '', count: 1 });
     const [spendingToast, setSpendingToast] = useState({ visible: false, amount: 0, description: '' });
     const [cashBurst, setCashBurst] = useState({ active: false, x: 0, y: 0, amount: 0 });
     const [moneyRain, setMoneyRain] = useState(false);
 
-    const showEarning = useCallback((amount, description = '', playSound = true) => {
-        setEarningToast({ visible: true, amount, description });
+    const showEarning = useCallback((amount, description = '', playSound = true, count = 1) => {
+        setEarningToast({ visible: true, amount, description, count });
         if (playSound && soundSystem?.play) {
             soundSystem.play('coin'); // Assume coin sound exists
+        }
+        // For larger amounts or multiple completions, also show cash burst
+        if (amount >= 100 || count > 1) {
+            setCashBurst({
+                active: true,
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 3,
+                amount: amount * count
+            });
         }
     }, [soundSystem]);
 
@@ -373,6 +394,7 @@ export const useMoneyAnimations = (soundSystem) => {
                 description={earningToast.description}
                 visible={earningToast.visible}
                 onHide={hideEarningToast}
+                count={earningToast.count}
             />
             <SpendingToast
                 amount={spendingToast.amount}

@@ -85,13 +85,32 @@ const FamilyEconomyApp = () => {
     const [editingChore, setEditingChore] = useState(null);
     const [showParentReview, setShowParentReview] = useState(false);
 
-    // Form State
-    const [choreForm, setChoreForm] = useState({ ...DEFAULT_CHORE_FORM, assignTo: '' });
-    const [jobForm, setJobForm] = useState({ ...DEFAULT_JOB_FORM, assignTo: '' });
+    // Form State - assignTo is now an array for multi-select
+    const [choreForm, setChoreForm] = useState({ ...DEFAULT_CHORE_FORM, assignTo: [] });
+    const [jobForm, setJobForm] = useState({ ...DEFAULT_JOB_FORM, assignTo: [] });
     const [userForm, setUserForm] = useState({ name: '', avatar: '👤', role: 'child' });
 
     // Get child users for assignment dropdowns
     const childUsers = economy.users.filter(u => u.role === 'child');
+
+    // Toggle user selection for multi-select
+    const toggleChoreAssignment = (userId) => {
+        setChoreForm(prev => ({
+            ...prev,
+            assignTo: prev.assignTo.includes(userId)
+                ? prev.assignTo.filter(id => id !== userId)
+                : [...prev.assignTo, userId]
+        }));
+    };
+
+    const toggleJobAssignment = (userId) => {
+        setJobForm(prev => ({
+            ...prev,
+            assignTo: prev.assignTo.includes(userId)
+                ? prev.assignTo.filter(id => id !== userId)
+                : [...prev.assignTo, userId]
+        }));
+    };
 
     // Reset form when opening editors
     const openChoreEditor = (chore = null) => {
@@ -101,11 +120,11 @@ const FamilyEconomyApp = () => {
                 icon: chore.icon || '📋',
                 points: chore.points || 5,
                 repeatType: chore.recurrence || RECURRENCE_TYPE.DAILY,
-                assignTo: chore.userId || ''
+                assignTo: [chore.userId] // Single user when editing existing
             });
             setEditingChore(chore);
         } else {
-            setChoreForm({ ...DEFAULT_CHORE_FORM, assignTo: childUsers[0]?.id || '' });
+            setChoreForm({ ...DEFAULT_CHORE_FORM, assignTo: [] });
             setEditingChore(null);
         }
         setShowChoreEditor(true);
@@ -123,11 +142,11 @@ const FamilyEconomyApp = () => {
                 maxCompletionsPerPeriod: job.maxCompletionsPerPeriod || null,
                 requiresApproval: job.requiresApproval !== false,
                 description: job.description || '',
-                assignTo: job.userId || ''
+                assignTo: [job.userId] // Single user when editing existing
             });
             setEditingJob(job);
         } else {
-            setJobForm({ ...DEFAULT_JOB_FORM, assignTo: childUsers[0]?.id || '' });
+            setJobForm({ ...DEFAULT_JOB_FORM, assignTo: [] });
             setEditingJob(null);
         }
         setShowJobEditor(true);
@@ -151,7 +170,7 @@ const FamilyEconomyApp = () => {
     // Save handlers
     const handleSaveChore = () => {
         if (!choreForm.name.trim()) return;
-        if (!choreForm.assignTo) return; // Must have assigned user
+        if (!choreForm.assignTo || choreForm.assignTo.length === 0) return; // Must have assigned user(s)
 
         const choreData = {
             name: choreForm.name,
@@ -161,18 +180,20 @@ const FamilyEconomyApp = () => {
         };
 
         if (editingChore) {
-            // Update existing chore
-            economy.updateChore(editingChore.id, { ...choreData, userId: choreForm.assignTo });
+            // Update existing chore - only update for first selected user
+            economy.updateChore(editingChore.id, { ...choreData, userId: choreForm.assignTo[0] });
         } else {
-            // Create new chore for the selected user
-            economy.addChore(choreData, choreForm.assignTo);
+            // Create new chore for each selected user
+            choreForm.assignTo.forEach(userId => {
+                economy.addChore(choreData, userId);
+            });
         }
         setShowChoreEditor(false);
     };
 
     const handleSaveJob = () => {
         if (!jobForm.title.trim()) return;
-        if (!jobForm.assignTo) return; // Must have assigned user
+        if (!jobForm.assignTo || jobForm.assignTo.length === 0) return; // Must have assigned user(s)
 
         const jobData = {
             title: jobForm.title,
@@ -187,11 +208,13 @@ const FamilyEconomyApp = () => {
         };
 
         if (editingJob) {
-            // Update existing job
-            economy.updateJob(editingJob.id, { ...jobData, userId: jobForm.assignTo });
+            // Update existing job - only update for first selected user
+            economy.updateJob(editingJob.id, { ...jobData, userId: jobForm.assignTo[0] });
         } else {
-            // Create new job for the selected user
-            economy.addJob(jobData, jobForm.assignTo);
+            // Create new job for each selected user
+            jobForm.assignTo.forEach(userId => {
+                economy.addJob(jobData, userId);
+            });
         }
         setShowJobEditor(false);
     };
@@ -254,7 +277,8 @@ const FamilyEconomyApp = () => {
     const handleCompleteJob = (jobId, count = 1) => {
         const result = economy.completeJob(jobId, count);
         if (result?.success && result?.earned) {
-            showEarning(result.earned, result.jobTitle);
+            // Pass count to show multiplier in animation
+            showEarning(result.earned, result.jobTitle, true, count);
         }
     };
 
@@ -382,6 +406,20 @@ const FamilyEconomyApp = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
+                            {/* Parent Review Button in Header */}
+                            {isParent && pendingApprovalsCount > 0 && (
+                                <button
+                                    onClick={() => requireParentAccess(() => setShowParentReview(true))}
+                                    className="relative bg-yellow-500 hover:bg-yellow-400 text-white rounded-full p-2 transition-all"
+                                    title="Review pending approvals"
+                                >
+                                    <span className="text-xl">👨‍👩‍👧</span>
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                        {pendingApprovalsCount}
+                                    </span>
+                                </button>
+                            )}
+
                             {/* Balance Display */}
                             <div className="text-right">
                                 <div className="text-white/60 text-xs">Balance</div>
@@ -450,19 +488,6 @@ const FamilyEconomyApp = () => {
                 {/* Chores Tab */}
                 {activeTab === 'chores' && (
                     <div className="space-y-4">
-                        {/* Parent Review Button */}
-                        {pendingApprovalsCount > 0 && (
-                            <button
-                                onClick={() => requireParentAccess(() => setShowParentReview(true))}
-                                className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl font-bold flex items-center justify-center gap-2"
-                            >
-                                <span>👨‍👩‍👧 Parent Review</span>
-                                <span className="bg-red-500 text-white text-sm rounded-full px-2">
-                                    {pendingApprovalsCount}
-                                </span>
-                            </button>
-                        )}
-
                         {/* Daily Chores */}
                         <div>
                             <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
@@ -475,6 +500,7 @@ const FamilyEconomyApp = () => {
                                         chore={chore}
                                         onComplete={() => handleCompleteChore(chore.id)}
                                         onEdit={() => requireParentAccess(() => openChoreEditor(chore))}
+                                        isParent={isParent}
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.DAILY).length === 0 && (
@@ -495,6 +521,7 @@ const FamilyEconomyApp = () => {
                                         chore={chore}
                                         onComplete={() => handleCompleteChore(chore.id)}
                                         onEdit={() => requireParentAccess(() => openChoreEditor(chore))}
+                                        isParent={isParent}
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.WEEKLY).length === 0 && (
@@ -534,6 +561,7 @@ const FamilyEconomyApp = () => {
                                 chores={userChores}
                                 onComplete={(count) => handleCompleteJob(job.id, count)}
                                 onEdit={() => requireParentAccess(() => openJobEditor(job))}
+                                isParent={isParent}
                             />
                         ))}
 
@@ -711,21 +739,34 @@ const FamilyEconomyApp = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
-                                <select
-                                    value={choreForm.assignTo}
-                                    onChange={(e) => setChoreForm({...choreForm, assignTo: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                >
-                                    <option value="">Select a child...</option>
-                                    {childUsers.map(user => (
-                                        <option key={user.id} value={user.id}>
-                                            {user.avatar} {user.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {childUsers.length === 0 && (
-                                    <p className="text-xs text-red-500 mt-1">Add a child first before creating chores.</p>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Assign To {!editingChore && '(select one or more)'}
+                                </label>
+                                {childUsers.length === 0 ? (
+                                    <p className="text-xs text-red-500">Add a child first before creating chores.</p>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
+                                        {childUsers.map(user => (
+                                            <button
+                                                key={user.id}
+                                                type="button"
+                                                onClick={() => toggleChoreAssignment(user.id)}
+                                                disabled={editingChore && choreForm.assignTo[0] !== user.id}
+                                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                                                    choreForm.assignTo.includes(user.id)
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                                } ${editingChore && choreForm.assignTo[0] !== user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                <span>{user.avatar}</span>
+                                                <span>{user.name}</span>
+                                                {choreForm.assignTo.includes(user.id) && <span>✓</span>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {editingChore && (
+                                    <p className="text-xs text-gray-500 mt-1">When editing, assignment cannot be changed.</p>
                                 )}
                             </div>
                         </div>
@@ -738,14 +779,14 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveChore}
-                                disabled={!choreForm.assignTo || childUsers.length === 0}
+                                disabled={choreForm.assignTo.length === 0 || childUsers.length === 0}
                                 className={`flex-1 py-3 rounded-xl font-semibold ${
-                                    choreForm.assignTo && childUsers.length > 0
+                                    choreForm.assignTo.length > 0 && childUsers.length > 0
                                         ? 'bg-purple-500 text-white'
                                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                             >
-                                Save
+                                {editingChore ? 'Save' : `Create${choreForm.assignTo.length > 1 ? ` for ${choreForm.assignTo.length} children` : ''}`}
                             </button>
                         </div>
                     </div>
@@ -853,21 +894,34 @@ const FamilyEconomyApp = () => {
                                 </label>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
-                                <select
-                                    value={jobForm.assignTo}
-                                    onChange={(e) => setJobForm({...jobForm, assignTo: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                >
-                                    <option value="">Select a child...</option>
-                                    {childUsers.map(user => (
-                                        <option key={user.id} value={user.id}>
-                                            {user.avatar} {user.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {childUsers.length === 0 && (
-                                    <p className="text-xs text-red-500 mt-1">Add a child first before creating jobs.</p>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Assign To {!editingJob && '(select one or more)'}
+                                </label>
+                                {childUsers.length === 0 ? (
+                                    <p className="text-xs text-red-500">Add a child first before creating jobs.</p>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
+                                        {childUsers.map(user => (
+                                            <button
+                                                key={user.id}
+                                                type="button"
+                                                onClick={() => toggleJobAssignment(user.id)}
+                                                disabled={editingJob && jobForm.assignTo[0] !== user.id}
+                                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                                                    jobForm.assignTo.includes(user.id)
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                                } ${editingJob && jobForm.assignTo[0] !== user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                <span>{user.avatar}</span>
+                                                <span>{user.name}</span>
+                                                {jobForm.assignTo.includes(user.id) && <span>✓</span>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {editingJob && (
+                                    <p className="text-xs text-gray-500 mt-1">When editing, assignment cannot be changed.</p>
                                 )}
                             </div>
                         </div>
@@ -880,14 +934,14 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveJob}
-                                disabled={!jobForm.assignTo || childUsers.length === 0}
+                                disabled={jobForm.assignTo.length === 0 || childUsers.length === 0}
                                 className={`flex-1 py-3 rounded-xl font-semibold ${
-                                    jobForm.assignTo && childUsers.length > 0
+                                    jobForm.assignTo.length > 0 && childUsers.length > 0
                                         ? 'bg-purple-500 text-white'
                                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                             >
-                                Save
+                                {editingJob ? 'Save' : `Create${jobForm.assignTo.length > 1 ? ` for ${jobForm.assignTo.length} children` : ''}`}
                             </button>
                         </div>
                     </div>
@@ -1446,31 +1500,35 @@ const FamilyEconomyApp = () => {
 
 // ============ SIMPLE CARD COMPONENTS ============
 
-const ChoreCardSimple = ({ chore, onComplete, onEdit }) => {
+const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
     const isCompleted = chore.completedToday || chore.completed;
     const isPending = chore.pendingApproval;
 
     return (
         <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
-            isCompleted ? 'opacity-60' : ''
+            isCompleted ? 'bg-green-50 border-2 border-green-200' : ''
         }`}>
             <div className="flex items-center gap-3">
-                <span className="text-3xl">{chore.icon}</span>
+                <span className={`text-3xl ${isCompleted ? 'grayscale' : ''}`}>{chore.icon}</span>
                 <div className="flex-1">
-                    <div className="font-semibold text-gray-800">{chore.name}</div>
+                    <div className={`font-semibold ${isCompleted ? 'text-green-700 line-through' : 'text-gray-800'}`}>
+                        {chore.name}
+                    </div>
                     <div className="text-sm text-gray-500">
                         {chore.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
                         {chore.points && ` • 💎 ${chore.points} gems`}
                     </div>
                 </div>
                 <div className="flex gap-2 items-center">
-                    <button
-                        onClick={onEdit}
-                        className="text-gray-400 hover:text-purple-600 p-2"
-                        title="Edit (Parent)"
-                    >
-                        ✏️
-                    </button>
+                    {isParent && (
+                        <button
+                            onClick={onEdit}
+                            className="text-gray-400 hover:text-purple-600 p-2"
+                            title="Edit"
+                        >
+                            ✏️
+                        </button>
+                    )}
                     {!isCompleted && !isPending && (
                         <button
                             onClick={onComplete}
@@ -1484,9 +1542,9 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit }) => {
                             ⏳ Pending
                         </span>
                     )}
-                    {isCompleted && (
-                        <span className="bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm font-medium">
-                            ✅ Complete
+                    {isCompleted && !isPending && (
+                        <span className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-medium">
+                            ✅ Done!
                         </span>
                     )}
                 </div>
@@ -1495,7 +1553,7 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit }) => {
     );
 };
 
-const JobCardSimple = ({ job, chores, onComplete, onEdit }) => {
+const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
     const isLocked = job.isLocked;
     const completionsToday = job.completions?.filter(c => {
         const today = new Date().toDateString();
@@ -1503,15 +1561,22 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit }) => {
     }).length || 0;
     const maxCompletions = job.maxCompletionsPerPeriod;
     const canComplete = !isLocked && (!maxCompletions || completionsToday < maxCompletions);
+    const isMaxedOut = maxCompletions && completionsToday >= maxCompletions;
+    const hasCompletedOnce = completionsToday > 0 && !job.allowMultipleCompletions;
+
+    // Job is "done" if it's single-completion and completed, or maxed out for multi-completion
+    const isDone = hasCompletedOnce || isMaxedOut;
 
     return (
         <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
-            isLocked ? 'opacity-60' : ''
+            isLocked ? 'opacity-60' : isDone ? 'bg-green-50 border-2 border-green-200' : ''
         }`}>
             <div className="flex items-center gap-3">
-                <span className="text-3xl">{job.icon || '💼'}</span>
+                <span className={`text-3xl ${isDone ? 'grayscale' : ''}`}>{job.icon || '💼'}</span>
                 <div className="flex-1">
-                    <div className="font-semibold text-gray-800">{job.title}</div>
+                    <div className={`font-semibold ${isDone ? 'text-green-700' : 'text-gray-800'}`}>
+                        {job.title}
+                    </div>
                     <div className="text-sm text-gray-500">
                         {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
                         {job.allowMultipleCompletions && maxCompletions &&
@@ -1525,25 +1590,31 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit }) => {
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={onEdit}
-                        className="text-gray-400 hover:text-purple-600 p-2"
-                        title="Edit (Parent)"
-                    >
-                        ✏️
-                    </button>
+                    {isParent && (
+                        <button
+                            onClick={onEdit}
+                            className="text-gray-400 hover:text-purple-600 p-2"
+                            title="Edit"
+                        >
+                            ✏️
+                        </button>
+                    )}
                     <div className="text-right">
-                        <div className="text-green-600 font-bold text-lg">
+                        <div className={`font-bold text-lg ${isDone ? 'text-green-600' : 'text-green-600'}`}>
                             {formatCents(job.value)}
                         </div>
-                        {canComplete && (
+                        {canComplete ? (
                             <button
                                 onClick={() => onComplete(1)}
                                 className="mt-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold"
                             >
                                 💰 Earn
                             </button>
-                        )}
+                        ) : isDone ? (
+                            <span className="mt-1 inline-block bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-medium">
+                                ✅ Done!
+                            </span>
+                        ) : null}
                     </div>
                 </div>
             </div>
