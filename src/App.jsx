@@ -90,8 +90,13 @@ const FamilyEconomyApp = () => {
     const [jobForm, setJobForm] = useState({ ...DEFAULT_JOB_FORM, assignTo: [] });
     const [userForm, setUserForm] = useState({ name: '', avatar: '👤', role: 'child' });
 
-    // Get child users for assignment dropdowns
+    // Get users for assignment dropdowns (all users can have chores/jobs)
+    const assignableUsers = economy.users;
+    // Keep childUsers for backward compatibility in some places
     const childUsers = economy.users.filter(u => u.role === 'child');
+
+    // Track if editor was opened from management modal (to return there after save)
+    const [openedFromManagement, setOpenedFromManagement] = useState(false);
 
     // Toggle user selection for multi-select
     const toggleChoreAssignment = (userId) => {
@@ -189,6 +194,11 @@ const FamilyEconomyApp = () => {
             });
         }
         setShowChoreEditor(false);
+        // Return to management modal if opened from there
+        if (openedFromManagement) {
+            setShowManagement(true);
+            setOpenedFromManagement(false);
+        }
     };
 
     const handleSaveJob = () => {
@@ -217,6 +227,11 @@ const FamilyEconomyApp = () => {
             });
         }
         setShowJobEditor(false);
+        // Return to management modal if opened from there
+        if (openedFromManagement) {
+            setShowManagement(true);
+            setOpenedFromManagement(false);
+        }
     };
 
     const handleSaveUser = () => {
@@ -385,8 +400,9 @@ const FamilyEconomyApp = () => {
         );
     };
 
-    // Calculate pending approvals count
-    const pendingApprovalsCount = (economy.jobsNeedingApproval || []).length;
+    // Calculate pending approvals - both jobs and chores
+    const choresNeedingApproval = economy.chores.filter(c => c.pendingApproval);
+    const pendingApprovalsCount = (economy.jobsNeedingApproval || []).length + choresNeedingApproval.length;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
@@ -744,11 +760,11 @@ const FamilyEconomyApp = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Assign To {!editingChore && '(select one or more)'}
                                 </label>
-                                {childUsers.length === 0 ? (
-                                    <p className="text-xs text-red-500">Add a child first before creating chores.</p>
+                                {assignableUsers.length === 0 ? (
+                                    <p className="text-xs text-red-500">Add a family member first before creating chores.</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
-                                        {childUsers.map(user => (
+                                        {assignableUsers.map(user => (
                                             <button
                                                 key={user.id}
                                                 type="button"
@@ -761,13 +777,14 @@ const FamilyEconomyApp = () => {
                                             >
                                                 <span>{user.avatar}</span>
                                                 <span>{user.name}</span>
+                                                <span className="text-xs opacity-60">({user.role})</span>
                                                 {choreForm.assignTo.includes(user.id) && <span>✓</span>}
                                             </button>
                                         ))}
                                     </div>
                                 )}
                                 {editingChore && (
-                                    <p className="text-xs text-gray-500 mt-1">Select a different child to reassign this chore.</p>
+                                    <p className="text-xs text-gray-500 mt-1">Select a different person to reassign this chore.</p>
                                 )}
                             </div>
                         </div>
@@ -780,14 +797,14 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveChore}
-                                disabled={choreForm.assignTo.length === 0 || childUsers.length === 0}
+                                disabled={choreForm.assignTo.length === 0 || assignableUsers.length === 0}
                                 className={`flex-1 py-3 rounded-xl font-semibold ${
-                                    choreForm.assignTo.length > 0 && childUsers.length > 0
+                                    choreForm.assignTo.length > 0 && assignableUsers.length > 0
                                         ? 'bg-purple-500 text-white'
                                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                             >
-                                {editingChore ? 'Save' : `Create${choreForm.assignTo.length > 1 ? ` for ${choreForm.assignTo.length} children` : ''}`}
+                                {editingChore ? 'Save' : `Create${choreForm.assignTo.length > 1 ? ` for ${choreForm.assignTo.length} people` : ''}`}
                             </button>
                         </div>
                     </div>
@@ -898,11 +915,11 @@ const FamilyEconomyApp = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Assign To {!editingJob && '(select one or more)'}
                                 </label>
-                                {childUsers.length === 0 ? (
-                                    <p className="text-xs text-red-500">Add a child first before creating jobs.</p>
+                                {assignableUsers.length === 0 ? (
+                                    <p className="text-xs text-red-500">Add a family member first before creating jobs.</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
-                                        {childUsers.map(user => (
+                                        {assignableUsers.map(user => (
                                             <button
                                                 key={user.id}
                                                 type="button"
@@ -915,13 +932,14 @@ const FamilyEconomyApp = () => {
                                             >
                                                 <span>{user.avatar}</span>
                                                 <span>{user.name}</span>
+                                                <span className="text-xs opacity-60">({user.role})</span>
                                                 {jobForm.assignTo.includes(user.id) && <span>✓</span>}
                                             </button>
                                         ))}
                                     </div>
                                 )}
                                 {editingJob && (
-                                    <p className="text-xs text-gray-500 mt-1">Select a different child to reassign this job.</p>
+                                    <p className="text-xs text-gray-500 mt-1">Select a different person to reassign this job.</p>
                                 )}
                             </div>
                         </div>
@@ -934,14 +952,14 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveJob}
-                                disabled={jobForm.assignTo.length === 0 || childUsers.length === 0}
+                                disabled={jobForm.assignTo.length === 0 || assignableUsers.length === 0}
                                 className={`flex-1 py-3 rounded-xl font-semibold ${
-                                    jobForm.assignTo.length > 0 && childUsers.length > 0
+                                    jobForm.assignTo.length > 0 && assignableUsers.length > 0
                                         ? 'bg-purple-500 text-white'
                                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                             >
-                                {editingJob ? 'Save' : `Create${jobForm.assignTo.length > 1 ? ` for ${jobForm.assignTo.length} children` : ''}`}
+                                {editingJob ? 'Save' : `Create${jobForm.assignTo.length > 1 ? ` for ${jobForm.assignTo.length} people` : ''}`}
                             </button>
                         </div>
                     </div>
@@ -1013,50 +1031,89 @@ const FamilyEconomyApp = () => {
             {/* Parent Review Modal */}
             {showParentReview && (
                 <div className="modal-overlay" onClick={() => setShowParentReview(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', maxHeight: '80vh', overflow: 'auto' }}>
                         <h2 className="text-xl font-bold text-purple-600 mb-4">
                             👨‍👩‍👧 Parent Review
                         </h2>
-                        {economy.jobsNeedingApproval.length === 0 ? (
+                        {pendingApprovalsCount === 0 ? (
                             <p className="text-gray-600 text-center py-4">No items pending approval!</p>
                         ) : (
                             <div className="space-y-4">
-                                {economy.jobsNeedingApproval.map(job => {
-                                    const pendingCount = job.completions.filter(c => c.status === 'pending').length;
-                                    const pendingValue = pendingCount * job.value;
-                                    const user = economy.users.find(u => u.id === job.userId);
-                                    return (
-                                        <div key={job.id} className="bg-gray-50 rounded-xl p-4">
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <span className="text-2xl">{job.icon || '💼'}</span>
-                                                <div className="flex-1">
-                                                    <div className="font-semibold text-gray-800">{job.title}</div>
-                                                    <div className="text-sm text-gray-500">
-                                                        {user?.name} • {pendingCount}x = {formatCents(pendingValue)}
+                                {/* Pending Chores */}
+                                {choresNeedingApproval.length > 0 && (
+                                    <>
+                                        <h3 className="font-semibold text-gray-700 text-sm">📋 Chores</h3>
+                                        {choresNeedingApproval.map(chore => {
+                                            const user = economy.users.find(u => u.id === chore.userId);
+                                            return (
+                                                <div key={chore.id} className="bg-blue-50 rounded-xl p-4">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <span className="text-2xl">{chore.icon || '📋'}</span>
+                                                        <div className="flex-1">
+                                                            <div className="font-semibold text-gray-800">{chore.name}</div>
+                                                            <div className="text-sm text-gray-500">
+                                                                {user?.name} • {chore.points} gems
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => economy.approveChore(chore.id, 'parent')}
+                                                            className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
+                                                        >
+                                                            ✓ Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => economy.updateChore(chore.id, { pendingApproval: false, completed: false })}
+                                                            className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
+                                                        >
+                                                            ✕ Reject
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        economy.approveJob(job.id, 'parent');
-                                                    }}
-                                                    className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
-                                                >
-                                                    ✓ Approve
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        economy.rejectJob(job.id, 'parent');
-                                                    }}
-                                                    className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
-                                                >
-                                                    ✕ Reject
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                            );
+                                        })}
+                                    </>
+                                )}
+
+                                {/* Pending Jobs */}
+                                {economy.jobsNeedingApproval.length > 0 && (
+                                    <>
+                                        <h3 className="font-semibold text-gray-700 text-sm">💼 Jobs</h3>
+                                        {economy.jobsNeedingApproval.map(job => {
+                                            const pendingCount = job.completions.filter(c => c.status === 'pending').length;
+                                            const pendingValue = pendingCount * job.value;
+                                            const user = economy.users.find(u => u.id === job.userId);
+                                            return (
+                                                <div key={job.id} className="bg-green-50 rounded-xl p-4">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <span className="text-2xl">{job.icon || '💼'}</span>
+                                                        <div className="flex-1">
+                                                            <div className="font-semibold text-gray-800">{job.title}</div>
+                                                            <div className="text-sm text-gray-500">
+                                                                {user?.name} • {pendingCount}x = {formatCents(pendingValue)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => economy.approveJob(job.id, 'parent')}
+                                                            className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
+                                                        >
+                                                            ✓ Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => economy.rejectJob(job.id, 'parent')}
+                                                            className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
+                                                        >
+                                                            ✕ Reject
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </>
+                                )}
                             </div>
                         )}
                         <button
@@ -1121,6 +1178,7 @@ const FamilyEconomyApp = () => {
                                 {/* Add New Chore Button */}
                                 <button
                                     onClick={() => {
+                                        setOpenedFromManagement(true);
                                         setShowManagement(false);
                                         openChoreEditor();
                                     }}
@@ -1173,6 +1231,7 @@ const FamilyEconomyApp = () => {
                                 {/* Add New Job Button */}
                                 <button
                                     onClick={() => {
+                                        setOpenedFromManagement(true);
                                         setShowManagement(false);
                                         openJobEditor();
                                     }}
