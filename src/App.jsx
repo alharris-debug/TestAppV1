@@ -6,6 +6,7 @@ import {
     loadFamilyEconomyState,
     usePatternLock,
     useMoneyAnimations,
+    useSoundSystem,
 
     // Components
     ActiveUserHeader,
@@ -42,14 +43,8 @@ import './chores/styles/chores.css';
 // ============ MAIN APP ============
 
 const FamilyEconomyApp = () => {
-    // Sound system (simplified)
-    const [soundEnabled, setSoundEnabled] = useState(true);
-    const soundSystem = {
-        play: (sound) => {
-            if (!soundEnabled) return;
-            // Could add actual sounds here
-        }
-    };
+    // Sound system with Web Audio API
+    const soundSystem = useSoundSystem();
 
     // Initialize Family Economy system with saved state from localStorage
     const economy = useFamilyEconomy({
@@ -314,7 +309,11 @@ const FamilyEconomyApp = () => {
     const handleCompleteChore = (choreId) => {
         const result = economy.completeChore(choreId);
         if (result?.requiresApproval) {
-            // Will go to parent review
+            // Will go to parent review - play approval needed sound
+            soundSystem.approvalNeeded();
+        } else {
+            // Completed instantly
+            soundSystem.taskComplete();
         }
     };
 
@@ -324,6 +323,12 @@ const FamilyEconomyApp = () => {
         if (result?.success && result?.earned) {
             // Pass count to show multiplier in animation
             showEarning(result.earned, result.jobTitle, true, count);
+            // Play cash register sound for earning money
+            soundSystem.cashRegister();
+        } else if (result?.requiresApproval) {
+            soundSystem.approvalNeeded();
+        } else {
+            soundSystem.taskComplete();
         }
     };
 
@@ -520,10 +525,13 @@ const FamilyEconomyApp = () => {
 
                             {/* Sound Toggle */}
                             <button
-                                onClick={() => setSoundEnabled(!soundEnabled)}
+                                onClick={() => {
+                                    soundSystem.toggleEnabled();
+                                    soundSystem.buttonClick();
+                                }}
                                 className="text-2xl opacity-80 hover:opacity-100"
                             >
-                                {soundEnabled ? '🔊' : '🔇'}
+                                {soundSystem.settings.enabled ? '🔊' : '🔇'}
                             </button>
                         </div>
                     </div>
@@ -549,7 +557,10 @@ const FamilyEconomyApp = () => {
                         ].map(tab => (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                onClick={() => {
+                                    setActiveTab(tab.id);
+                                    soundSystem.tabSwitch();
+                                }}
                                 className={`flex-1 py-3 text-center font-semibold transition-all relative ${
                                     activeTab === tab.id
                                         ? 'text-white border-b-2 border-white'
@@ -1119,13 +1130,19 @@ const FamilyEconomyApp = () => {
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => economy.approveChore(chore.id, 'parent')}
+                                                            onClick={() => {
+                                                                economy.approveChore(chore.id, 'parent');
+                                                                soundSystem.approved();
+                                                            }}
                                                             className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
                                                         >
                                                             ✓ Approve
                                                         </button>
                                                         <button
-                                                            onClick={() => economy.updateChore(chore.id, { pendingApproval: false, completed: false })}
+                                                            onClick={() => {
+                                                                economy.updateChore(chore.id, { pendingApproval: false, completed: false });
+                                                                soundSystem.rejected();
+                                                            }}
                                                             className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
                                                         >
                                                             ✕ Reject
@@ -1158,13 +1175,20 @@ const FamilyEconomyApp = () => {
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => economy.approveJob(job.id, 'parent')}
+                                                            onClick={() => {
+                                                                economy.approveJob(job.id, 'parent');
+                                                                soundSystem.approved();
+                                                                soundSystem.cashRegister();
+                                                            }}
                                                             className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
                                                         >
                                                             ✓ Approve
                                                         </button>
                                                         <button
-                                                            onClick={() => economy.rejectJob(job.id, 'parent')}
+                                                            onClick={() => {
+                                                                economy.rejectJob(job.id, 'parent');
+                                                                soundSystem.rejected();
+                                                            }}
                                                             className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
                                                         >
                                                             ✕ Reject
@@ -1198,7 +1222,10 @@ const FamilyEconomyApp = () => {
                         {/* Tabs */}
                         <div className="flex gap-2 mb-4">
                             <button
-                                onClick={() => setManagementTab('chores')}
+                                onClick={() => {
+                                    setManagementTab('chores');
+                                    soundSystem.tabSwitch();
+                                }}
                                 className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
                                     managementTab === 'chores'
                                         ? 'bg-purple-500 text-white'
@@ -1208,7 +1235,10 @@ const FamilyEconomyApp = () => {
                                 📋 Chores
                             </button>
                             <button
-                                onClick={() => setManagementTab('jobs')}
+                                onClick={() => {
+                                    setManagementTab('jobs');
+                                    soundSystem.tabSwitch();
+                                }}
                                 className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
                                     managementTab === 'jobs'
                                         ? 'bg-purple-500 text-white'
@@ -1218,7 +1248,10 @@ const FamilyEconomyApp = () => {
                                 💼 Jobs
                             </button>
                             <button
-                                onClick={() => setManagementTab('library')}
+                                onClick={() => {
+                                    setManagementTab('library');
+                                    soundSystem.tabSwitch();
+                                }}
                                 className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
                                     managementTab === 'library'
                                         ? 'bg-purple-500 text-white'

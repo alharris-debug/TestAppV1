@@ -57,6 +57,7 @@ export {
 export { useChoreManagement, default as useChoreManagementHook } from './hooks/useChoreManagement.js';
 export { usePatternLock, default as usePatternLockHook } from './hooks/usePatternLock.js';
 export { useFamilyEconomy, loadFamilyEconomyState, default as useFamilyEconomyHook } from './hooks/useFamilyEconomy.js';
+export { default as useSoundSystem, SOUNDS, SOUND_CATEGORIES } from './hooks/useSoundSystem.js';
 
 // Core Chore Components
 export {
