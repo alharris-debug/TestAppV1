@@ -1907,14 +1907,6 @@ const JobCardSimple = ({ job, chores, onComplete }) => {
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    {canComplete && (
-                        <button
-                            onClick={() => onComplete(1)}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold"
-                        >
-                            ✓ Done
-                        </button>
-                    )}
                     {hasPending && (
                         <div className="bg-amber-500/20 text-amber-400 border border-amber-500/50 px-3 py-2 rounded-lg text-sm font-bold">
                             PENDING
@@ -1924,6 +1916,14 @@ const JobCardSimple = ({ job, chores, onComplete }) => {
                         <div className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 px-3 py-2 rounded-lg text-sm font-bold">
                             DONE
                         </div>
+                    )}
+                    {canComplete && (
+                        <button
+                            onClick={() => onComplete(1)}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold"
+                        >
+                            ✓ Done
+                        </button>
                     )}
                 </div>
             </div>

@@ -267,10 +267,9 @@ export const EarningToast = ({
     useEffect(() => {
         if (visible) {
             setAnimKey(prev => prev + 1); // Force re-animate on new earning
-            const timer = setTimeout(onHide, 3500);
-            return () => clearTimeout(timer);
+            // Timeout is now managed in useMoneyAnimations hook
         }
-    }, [visible, amount, onHide]);
+    }, [visible, amount]);
 
     if (!visible) return null;
 
@@ -339,12 +338,32 @@ export const useMoneyAnimations = (soundSystem) => {
     const [spendingToast, setSpendingToast] = useState({ visible: false, amount: 0, description: '' });
     const [cashBurst, setCashBurst] = useState({ active: false, x: 0, y: 0, amount: 0 });
     const [moneyRain, setMoneyRain] = useState(false);
+    const [hideTimeoutId, setHideTimeoutId] = useState(null);
 
     const showEarning = useCallback((amount, description = '', playSound = true, count = 1) => {
-        setEarningToast({ visible: true, amount, description, count });
+        // Clear existing timeout to extend visibility
+        if (hideTimeoutId) {
+            clearTimeout(hideTimeoutId);
+        }
+
+        setEarningToast(prev => {
+            // If toast is already visible, add to the running total
+            if (prev.visible) {
+                return {
+                    visible: true,
+                    amount: prev.amount + amount,
+                    description: description || prev.description,
+                    count: prev.count + count
+                };
+            }
+            // Otherwise, start fresh
+            return { visible: true, amount, description, count };
+        });
+
         if (playSound && soundSystem?.play) {
             soundSystem.play('coin'); // Assume coin sound exists
         }
+
         // For larger amounts or multiple completions, also show cash burst
         if (amount >= 100 || count > 1) {
             setCashBurst({
@@ -354,7 +373,14 @@ export const useMoneyAnimations = (soundSystem) => {
                 amount: amount * count
             });
         }
-    }, [soundSystem]);
+
+        // Set new timeout for hiding
+        const newTimeoutId = setTimeout(() => {
+            setEarningToast({ visible: false, amount: 0, description: '', count: 1 });
+            setHideTimeoutId(null);
+        }, 3500);
+        setHideTimeoutId(newTimeoutId);
+    }, [soundSystem, hideTimeoutId]);
 
     const showSpending = useCallback((amount, description = '', playSound = true) => {
         setSpendingToast({ visible: true, amount, description });
@@ -372,8 +398,12 @@ export const useMoneyAnimations = (soundSystem) => {
     }, []);
 
     const hideEarningToast = useCallback(() => {
-        setEarningToast(prev => ({ ...prev, visible: false }));
-    }, []);
+        if (hideTimeoutId) {
+            clearTimeout(hideTimeoutId);
+            setHideTimeoutId(null);
+        }
+        setEarningToast({ visible: false, amount: 0, description: '', count: 1 });
+    }, [hideTimeoutId]);
 
     const hideSpendingToast = useCallback(() => {
         setSpendingToast(prev => ({ ...prev, visible: false }));
