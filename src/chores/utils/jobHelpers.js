@@ -36,6 +36,38 @@ export const countCompletedChores = (chores, userId, recurrence, resetDay) => {
 };
 
 /**
+ * Count total chores for a user by recurrence type
+ * @param {Object[]} chores - All chores
+ * @param {string} userId - User ID
+ * @param {string} recurrence - 'daily' or 'weekly'
+ * @returns {number} Total count of chores
+ */
+export const countTotalChores = (chores, userId, recurrence) => {
+    return chores.filter(chore =>
+        chore.userId === userId &&
+        chore.recurrence === recurrence
+    ).length;
+};
+
+/**
+ * Check if all chores are completed for a user
+ * @param {Object[]} chores - All chores
+ * @param {string} userId - User ID
+ * @param {number} resetDay - Weekly reset day
+ * @returns {boolean} Whether all chores are completed
+ */
+export const areAllChoresCompleted = (chores, userId, resetDay) => {
+    const userChores = chores.filter(c => c.userId === userId);
+    if (userChores.length === 0) return true; // No chores = unlocked
+
+    return userChores.every(chore =>
+        chore.completed &&
+        !chore.pendingApproval &&
+        isCurrentPeriod(chore.completedAt, chore.recurrence, resetDay)
+    );
+};
+
+/**
  * Check if a job is unlocked based on chore completion
  * @param {Object} job - Job to check
  * @param {Object[]} chores - All chores
@@ -47,6 +79,13 @@ export const isJobUnlocked = (job, chores, resetDay) => {
 
     // If no unlock conditions, job is always unlocked
     if (!unlockConditions) return true;
+
+    // Check if "all chores required" is set
+    if (unlockConditions.requireAllChores) {
+        return areAllChoresCompleted(chores, userId, resetDay);
+    }
+
+    // Legacy: check by count
     if (unlockConditions.dailyChores === 0 && unlockConditions.weeklyChores === 0) {
         return true;
     }
