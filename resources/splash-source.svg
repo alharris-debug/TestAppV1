@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920">
+  <!-- Background -->
+  <rect width="1080" height="1920" fill="#0f172a"/>
+
+  <!-- Center content group -->
+  <g transform="translate(540, 960)">
+    <!-- Icon circle background -->
+    <circle cx="0" cy="-100" r="150" fill="#1e1b4b"/>
+
+    <!-- Dollar sign -->
+    <text x="0" y="-45" font-family="Arial, sans-serif" font-size="180" font-weight="bold" fill="#22c55e" text-anchor="middle">$</text>
+
+    <!-- App name -->
+    <text x="0" y="150" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#e2e8f0" text-anchor="middle">Family Economy</text>
+
+    <!-- Tagline -->
+    <text x="0" y="220" font-family="Arial, sans-serif" font-size="28" fill="#94a3b8" text-anchor="middle">Teach kids about money the fun way</text>
+
+    <!-- Decorative sparkles -->
+    <circle cx="-200" cy="-250" r="8" fill="#fbbf24"/>
+    <circle cx="200" cy="-250" r="8" fill="#fbbf24"/>
+    <circle cx="-180" cy="50" r="6" fill="#8b5cf6"/>
+    <circle cx="180" cy="50" r="6" fill="#8b5cf6"/>
+  </g>
+</svg>

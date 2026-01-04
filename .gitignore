@@ -25,3 +25,15 @@ npm-debug.log*
 
 # Temp
 *.tmp
+
+# Android / Capacitor
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/keys/
+android/app/keystore.properties
+*.keystore
+*.jks
+
+# Capacitor
+capacitor.config.ts.bak
