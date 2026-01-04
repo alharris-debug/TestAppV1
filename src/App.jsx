@@ -7,6 +7,7 @@ import {
     usePatternLock,
     useMoneyAnimations,
     useSoundSystem,
+    useEmailRecovery,
 
     // Components
     ActiveUserHeader,
@@ -25,6 +26,7 @@ import {
     PatternLockGrid,
     PasswordSetupModal,
     PasswordEntryModal,
+    PatternRecoveryModal,
 
     // Constants
     CHORE_ICONS,
@@ -69,9 +71,18 @@ const FamilyEconomyApp = () => {
         soundSystem
     });
 
+    // Email recovery for pattern lock (feature flagged - see config/features.js)
+    const emailRecovery = useEmailRecovery({
+        onRecoverySuccess: () => {
+            // Pattern was reset - trigger setup mode on next parent action
+            economy.setParentPassword(null);
+        }
+    });
+
     // UI State
     const [activeTab, setActiveTab] = useState('chores'); // 'chores', 'jobs'
     const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [showRecoveryModal, setShowRecoveryModal] = useState(false);
     const [showUserSelector, setShowUserSelector] = useState(false);
     const [showUserEditor, setShowUserEditor] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
@@ -817,6 +828,7 @@ const FamilyEconomyApp = () => {
                     isOpen={true}
                     onClose={() => patternLock.cancel()}
                     patternLock={patternLock}
+                    emailRecovery={emailRecovery}
                 />
             )}
 
@@ -825,8 +837,20 @@ const FamilyEconomyApp = () => {
                     isOpen={true}
                     onClose={() => patternLock.cancel()}
                     patternLock={patternLock}
+                    onForgotPattern={() => {
+                        patternLock.cancel();
+                        setShowRecoveryModal(true);
+                    }}
                 />
             )}
+
+            {/* Pattern Recovery Modal (Email-based) */}
+            <PatternRecoveryModal
+                isOpen={showRecoveryModal}
+                onClose={() => setShowRecoveryModal(false)}
+                emailRecovery={emailRecovery}
+                onRecoveryComplete={() => setShowRecoveryModal(false)}
+            />
 
             {/* Chore Editor Modal */}
             {showChoreEditor && (

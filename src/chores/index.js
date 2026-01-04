@@ -58,6 +58,10 @@ export { useChoreManagement, default as useChoreManagementHook } from './hooks/u
 export { usePatternLock, default as usePatternLockHook } from './hooks/usePatternLock.js';
 export { useFamilyEconomy, loadFamilyEconomyState, default as useFamilyEconomyHook } from './hooks/useFamilyEconomy.js';
 export { default as useSoundSystem, SOUNDS, SOUND_CATEGORIES } from './hooks/useSoundSystem.js';
+export { useEmailRecovery, default as useEmailRecoveryHook } from './hooks/useEmailRecovery.js';
+
+// Feature Flags
+export { FEATURES, isEmailRecoveryEnabled, isEmailRecoveryConfigured } from './config/features.js';
 
 // Core Chore Components
 export {
@@ -90,7 +94,8 @@ export {
 export {
     PatternLockGrid,
     PasswordSetupModal,
-    PasswordEntryModal
+    PasswordEntryModal,
+    PatternRecoveryModal
 } from './components/PatternLock.jsx';
 
 // Family Economy Components
