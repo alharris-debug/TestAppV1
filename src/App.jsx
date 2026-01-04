@@ -859,11 +859,13 @@ const FamilyEconomyApp = () => {
                                 onClick={handleSaveChore}
                                 className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
                             >
-                                {choreForm.assignTo.length === 0
-                                    ? 'Save to Library'
-                                    : choreForm.assignTo.length > 1
-                                        ? `Create for ${choreForm.assignTo.length} people`
-                                        : 'Create & Assign'}
+                                {editingChore
+                                    ? 'Save'
+                                    : choreForm.assignTo.length === 0
+                                        ? 'Save to Library'
+                                        : choreForm.assignTo.length > 1
+                                            ? `Create for ${choreForm.assignTo.length} people`
+                                            : 'Create & Assign'}
                             </button>
                         </div>
                     </div>
@@ -1012,11 +1014,13 @@ const FamilyEconomyApp = () => {
                                 onClick={handleSaveJob}
                                 className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
                             >
-                                {jobForm.assignTo.length === 0
-                                    ? 'Save to Library'
-                                    : jobForm.assignTo.length > 1
-                                        ? `Create for ${jobForm.assignTo.length} people`
-                                        : 'Create & Assign'}
+                                {editingJob
+                                    ? 'Save'
+                                    : jobForm.assignTo.length === 0
+                                        ? 'Save to Library'
+                                        : jobForm.assignTo.length > 1
+                                            ? `Create for ${jobForm.assignTo.length} people`
+                                            : 'Create & Assign'}
                             </button>
                         </div>
                     </div>
@@ -1670,8 +1674,16 @@ const JobCardSimple = ({ job, chores, onComplete }) => {
         }
     }).reduce((sum, c) => sum + (c.count || 1), 0) || 0;
 
-    // Check for pending completions
-    const hasPending = job.completions?.some(c => c.status === 'pending') || false;
+    // Check for pending completions in current period
+    const hasPending = job.completions?.some(c => {
+        if (c.status !== 'pending') return false;
+        if (job.recurrence === RECURRENCE_TYPE.DAILY) {
+            const today = new Date().toDateString();
+            return new Date(c.timestamp).toDateString() === today;
+        }
+        // Weekly - all completions in array are current period
+        return true;
+    }) || false;
 
     const maxCompletions = job.maxCompletionsPerPeriod;
     const isMaxedOut = maxCompletions && completionCount >= maxCompletions;
