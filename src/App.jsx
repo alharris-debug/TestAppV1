@@ -477,19 +477,19 @@ const FamilyEconomyApp = () => {
     }, {});
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
+        <div className="min-h-screen bg-slate-900">
             {/* Header */}
-            <header className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+            <header className="bg-slate-800 border-b border-slate-700">
                 <div className="max-w-lg mx-auto px-4 py-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setShowUserSelector(true)}
-                                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-full px-3 py-2 transition-all"
+                                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 rounded-full px-3 py-2 transition-all"
                             >
                                 <span className="text-2xl">{activeUser?.avatar || '👤'}</span>
                                 <span className="text-white font-semibold">{activeUser?.name || 'Select User'}</span>
-                                <span className="text-white/60">▼</span>
+                                <span className="text-slate-400">▼</span>
                             </button>
                         </div>
 
@@ -498,10 +498,10 @@ const FamilyEconomyApp = () => {
                             {isParent && (
                                 <button
                                     onClick={() => requireParentAccess(() => setShowParentReview(true))}
-                                    className={`relative ${pendingApprovalsCount > 0 ? 'bg-yellow-500 hover:bg-yellow-400' : 'bg-gray-400 hover:bg-gray-500'} text-white rounded-full p-2 transition-all`}
+                                    className={`relative ${pendingApprovalsCount > 0 ? 'bg-amber-500 hover:bg-amber-400' : 'bg-slate-600 hover:bg-slate-500'} text-white rounded-full p-2 transition-all`}
                                     title={pendingApprovalsCount > 0 ? "Review pending approvals" : "No pending approvals"}
                                 >
-                                    <span className="text-xl">👨‍👩‍👧</span>
+                                    <span className="text-xl">👨‍👩‍👧‍👦</span>
                                     {pendingApprovalsCount > 0 && (
                                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                                             {pendingApprovalsCount}
@@ -512,12 +512,12 @@ const FamilyEconomyApp = () => {
 
                             {/* Balance Display */}
                             <div className="text-right">
-                                <div className="text-white/60 text-xs">Balance</div>
-                                <div className="text-white font-bold text-xl">
+                                <div className="text-slate-400 text-xs">Balance</div>
+                                <div className="text-emerald-400 font-bold text-xl">
                                     {formatCents(activeUser?.cashBalance || 0)}
                                 </div>
                                 {(activeUser?.pendingBalance || 0) > 0 && (
-                                    <div className="text-yellow-300 text-xs">
+                                    <div className="text-amber-400 text-xs">
                                         +{formatCents(activeUser.pendingBalance)} pending
                                     </div>
                                 )}
@@ -538,7 +538,7 @@ const FamilyEconomyApp = () => {
 
                     {/* Streak Display */}
                     {activeUser?.currentStreak > 0 && (
-                        <div className="mt-2 flex items-center justify-center gap-2 text-orange-300">
+                        <div className="mt-2 flex items-center justify-center gap-2 text-amber-400">
                             <span className="text-xl">🔥</span>
                             <span className="font-bold">{activeUser.currentStreak} Day Streak!</span>
                         </div>
@@ -547,13 +547,13 @@ const FamilyEconomyApp = () => {
             </header>
 
             {/* Navigation Tabs */}
-            <nav className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+            <nav className="bg-slate-800 border-b border-slate-700">
                 <div className="max-w-lg mx-auto px-4">
                     <div className="flex">
                         {[
-                            { id: 'chores', label: '📋 Chores', badge: null },
-                            { id: 'jobs', label: '💼 Jobs', badge: null },
-                            { id: 'history', label: '📊 History', badge: null }
+                            { id: 'chores', label: 'Tasks', icon: '✓' },
+                            { id: 'jobs', label: 'Jobs', icon: '💵' },
+                            { id: 'history', label: 'History', icon: '📊' }
                         ].map(tab => (
                             <button
                                 key={tab.id}
@@ -561,18 +561,14 @@ const FamilyEconomyApp = () => {
                                     setActiveTab(tab.id);
                                     soundSystem.tabSwitch();
                                 }}
-                                className={`flex-1 py-3 text-center font-semibold transition-all relative ${
+                                className={`flex-1 py-3 text-center font-semibold transition-all relative flex items-center justify-center gap-2 ${
                                     activeTab === tab.id
-                                        ? 'text-white border-b-2 border-white'
-                                        : 'text-white/60 hover:text-white/80'
+                                        ? 'text-white border-b-2 border-violet-500'
+                                        : 'text-slate-400 hover:text-slate-200'
                                 }`}
                             >
-                                {tab.label}
-                                {tab.badge && (
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                        {tab.badge}
-                                    </span>
-                                )}
+                                <span>{tab.icon}</span>
+                                <span>{tab.label}</span>
                             </button>
                         ))}
                     </div>
@@ -583,13 +579,13 @@ const FamilyEconomyApp = () => {
             <main className="max-w-lg mx-auto px-4 py-6">
                 {/* Chores Tab */}
                 {activeTab === 'chores' && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {/* Daily Chores */}
                         <div>
-                            <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-                                <span>📅</span> Daily Chores
+                            <h2 className="text-slate-200 font-bold text-lg mb-3 flex items-center gap-2">
+                                <span className="text-violet-400">◉</span> Daily Tasks
                             </h2>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.DAILY).map(chore => (
                                     <ChoreCardSimple
                                         key={chore.id}
@@ -598,17 +594,17 @@ const FamilyEconomyApp = () => {
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.DAILY).length === 0 && (
-                                    <div className="text-white/60 text-center py-4">No daily chores yet</div>
+                                    <div className="text-slate-500 text-center py-4 bg-slate-800/50 rounded-xl">No daily tasks yet</div>
                                 )}
                             </div>
                         </div>
 
                         {/* Weekly Chores */}
                         <div>
-                            <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-                                <span>📆</span> Weekly Chores
+                            <h2 className="text-slate-200 font-bold text-lg mb-3 flex items-center gap-2">
+                                <span className="text-cyan-400">◎</span> Weekly Tasks
                             </h2>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.WEEKLY).map(chore => (
                                     <ChoreCardSimple
                                         key={chore.id}
@@ -617,7 +613,7 @@ const FamilyEconomyApp = () => {
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.WEEKLY).length === 0 && (
-                                    <div className="text-white/60 text-center py-4">No weekly chores yet</div>
+                                    <div className="text-slate-500 text-center py-4 bg-slate-800/50 rounded-xl">No weekly tasks yet</div>
                                 )}
                             </div>
                         </div>
@@ -629,9 +625,9 @@ const FamilyEconomyApp = () => {
                                     setManagementTab('chores');
                                     setShowManagement(true);
                                 })}
-                                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
+                                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold flex items-center justify-center gap-2 border border-dashed border-slate-600"
                             >
-                                <span>⚙️</span> Manage Chores & Jobs
+                                <span>⚙</span> Manage Tasks & Jobs
                             </button>
                         )}
                     </div>
@@ -640,9 +636,9 @@ const FamilyEconomyApp = () => {
                 {/* Jobs Tab */}
                 {activeTab === 'jobs' && (
                     <div className="space-y-4">
-                        <div className="bg-white/10 rounded-xl p-4 mb-4">
-                            <p className="text-white/80 text-sm">
-                                💡 Jobs earn real money! Complete your daily chores to unlock jobs.
+                        <div className="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+                            <p className="text-slate-300 text-sm">
+                                💡 Jobs earn real money! Complete your daily tasks to unlock jobs.
                             </p>
                         </div>
 
@@ -656,7 +652,7 @@ const FamilyEconomyApp = () => {
                         ))}
 
                         {userJobs.length === 0 && (
-                            <div className="text-white/60 text-center py-8">
+                            <div className="text-slate-500 text-center py-8 bg-slate-800/50 rounded-xl">
                                 No jobs available yet.{!isParent && ' Ask a parent to add some!'}
                             </div>
                         )}
@@ -668,9 +664,9 @@ const FamilyEconomyApp = () => {
                                     setManagementTab('jobs');
                                     setShowManagement(true);
                                 })}
-                                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold flex items-center justify-center gap-2 border-2 border-dashed border-white/40"
+                                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold flex items-center justify-center gap-2 border border-dashed border-slate-600"
                             >
-                                <span>⚙️</span> Manage Chores & Jobs
+                                <span>⚙</span> Manage Tasks & Jobs
                             </button>
                         )}
                     </div>
@@ -680,18 +676,20 @@ const FamilyEconomyApp = () => {
                 {activeTab === 'history' && (
                     <div className="space-y-4">
                         {/* Summary Card */}
-                        <div className="bg-white rounded-xl p-4 shadow-lg">
-                            <h3 className="font-bold text-gray-800 mb-3">💰 Balance Summary</h3>
+                        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                            <h3 className="font-bold text-slate-200 mb-4 flex items-center gap-2">
+                                <span className="text-emerald-400">$</span> Balance Summary
+                            </h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <div className="text-gray-500 text-sm">Available</div>
-                                    <div className="text-2xl font-bold text-green-600">
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                    <div className="text-slate-400 text-sm">Available</div>
+                                    <div className="text-2xl font-bold text-emerald-400">
                                         {formatCents(activeUser?.cashBalance || 0)}
                                     </div>
                                 </div>
-                                <div>
-                                    <div className="text-gray-500 text-sm">Pending</div>
-                                    <div className="text-2xl font-bold text-yellow-600">
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                    <div className="text-slate-400 text-sm">Pending</div>
+                                    <div className="text-2xl font-bold text-amber-400">
                                         {formatCents(activeUser?.pendingBalance || 0)}
                                     </div>
                                 </div>
@@ -699,26 +697,26 @@ const FamilyEconomyApp = () => {
                         </div>
 
                         {/* Transaction List */}
-                        <div className="bg-white rounded-xl p-4 shadow-lg">
-                            <h3 className="font-bold text-gray-800 mb-3">📜 Recent Transactions</h3>
+                        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                            <h3 className="font-bold text-slate-200 mb-4">Recent Transactions</h3>
                             {userTransactions.length > 0 ? (
                                 <div className="space-y-2">
                                     {userTransactions.slice(0, 10).map(tx => (
-                                        <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                                        <div key={tx.id} className="flex items-center justify-between py-3 border-b border-slate-700 last:border-0">
                                             <div>
-                                                <div className="font-medium text-gray-800">{tx.description}</div>
-                                                <div className="text-xs text-gray-500">
+                                                <div className="font-medium text-slate-200">{tx.description}</div>
+                                                <div className="text-xs text-slate-500">
                                                     {new Date(tx.date).toLocaleDateString()}
                                                 </div>
                                             </div>
-                                            <div className={`font-bold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            <div className={`font-bold ${tx.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                 {tx.amount >= 0 ? '+' : ''}{formatCents(tx.amount)}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-gray-500 text-center py-4">
+                                <div className="text-slate-500 text-center py-4">
                                     No transactions yet
                                 </div>
                             )}
@@ -730,8 +728,8 @@ const FamilyEconomyApp = () => {
             {/* User Selector Modal */}
             {showUserSelector && (
                 <div className="modal-overlay" onClick={() => setShowUserSelector(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold text-purple-600 mb-4">👥 Select User</h2>
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4">Select User</h2>
                         <div className="space-y-2">
                             {economy.users.map(user => (
                                 <button
@@ -742,16 +740,16 @@ const FamilyEconomyApp = () => {
                                     }}
                                     className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all ${
                                         user.id === economy.activeUserId
-                                            ? 'bg-purple-100 border-2 border-purple-500'
-                                            : 'bg-gray-100 hover:bg-gray-200'
+                                            ? 'bg-violet-600/30 border-2 border-violet-500'
+                                            : 'bg-slate-700 hover:bg-slate-600 border-2 border-transparent'
                                     }`}
                                 >
                                     <span className="text-3xl">{user.avatar}</span>
                                     <div className="text-left flex-1">
-                                        <div className="font-semibold">{user.name}</div>
-                                        <div className="text-sm text-gray-500">{user.role}</div>
+                                        <div className="font-semibold text-slate-100">{user.name}</div>
+                                        <div className="text-sm text-slate-400">{user.role}</div>
                                     </div>
-                                    <div className="text-green-600 font-bold">{formatCents(user.cashBalance)}</div>
+                                    <div className="text-emerald-400 font-bold">{formatCents(user.cashBalance)}</div>
                                 </button>
                             ))}
                         </div>
@@ -760,9 +758,9 @@ const FamilyEconomyApp = () => {
                                 setShowUserSelector(false);
                                 requireParentAccess(() => openUserEditor());
                             }}
-                            className="w-full mt-4 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                            className="w-full mt-4 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold"
                         >
-                            ➕ Add Family Member
+                            + Add Family Member
                         </button>
                     </div>
                 </div>
@@ -788,29 +786,29 @@ const FamilyEconomyApp = () => {
             {/* Chore Editor Modal */}
             {showChoreEditor && (
                 <div className="modal-overlay" onClick={closeChoreEditor}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold text-purple-600 mb-4">
-                            {editingChore ? '✏️ Edit Chore' : '➕ Add Chore'}
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4">
+                            {editingChore ? 'Edit Task' : 'New Task'}
                         </h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Name</label>
                                 <input
                                     type="text"
                                     value={choreForm.name}
                                     onChange={(e) => setChoreForm({...choreForm, name: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                     placeholder="e.g., Make bed"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Icon</label>
                                 <div className="flex flex-wrap gap-2">
                                     {Object.entries(CHORE_ICONS).map(([key, icon]) => (
                                         <button
                                             key={key}
                                             onClick={() => setChoreForm({...choreForm, icon})}
-                                            className={`text-2xl p-2 rounded-lg ${choreForm.icon === icon ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-gray-100'}`}
+                                            className={`text-2xl p-2 rounded-lg ${choreForm.icon === icon ? 'bg-violet-600 ring-2 ring-violet-400' : 'bg-slate-700 hover:bg-slate-600'}`}
                                         >
                                             {icon}
                                         </button>
@@ -818,27 +816,27 @@ const FamilyEconomyApp = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Frequency</label>
                                 <select
                                     value={choreForm.repeatType}
                                     onChange={(e) => setChoreForm({...choreForm, repeatType: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
                                 >
                                     <option value={RECURRENCE_TYPE.DAILY}>Daily</option>
                                     <option value={RECURRENCE_TYPE.WEEKLY}>Weekly</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-slate-300 mb-1">
                                     Assign To (optional)
                                 </label>
-                                <p className="text-xs text-gray-500 mb-2">
+                                <p className="text-xs text-slate-500 mb-2">
                                     Leave empty to save to library. Select people to make it active.
                                 </p>
                                 {assignableUsers.length === 0 ? (
-                                    <p className="text-xs text-yellow-600">No family members yet. Chore will be saved to library.</p>
+                                    <p className="text-xs text-amber-400">No family members yet. Task will be saved to library.</p>
                                 ) : (
-                                    <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
+                                    <div className="flex flex-wrap gap-2 p-2 border border-slate-600 rounded-lg bg-slate-900/50">
                                         {assignableUsers.map(user => (
                                             <button
                                                 key={user.id}
@@ -846,8 +844,8 @@ const FamilyEconomyApp = () => {
                                                 onClick={() => toggleChoreAssignment(user.id)}
                                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                                                     choreForm.assignTo.includes(user.id)
-                                                        ? 'bg-purple-500 text-white'
-                                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                                        ? 'bg-violet-600 text-white'
+                                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                                 }`}
                                             >
                                                 <span>{user.avatar}</span>
@@ -862,13 +860,13 @@ const FamilyEconomyApp = () => {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={closeChoreEditor}
-                                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                                className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSaveChore}
-                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                                className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold"
                             >
                                 {editingChore
                                     ? 'Save'
@@ -886,46 +884,46 @@ const FamilyEconomyApp = () => {
             {/* Job Editor Modal */}
             {showJobEditor && (
                 <div className="modal-overlay" onClick={closeJobEditor}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold text-purple-600 mb-4">
-                            {editingJob ? '✏️ Edit Job' : '➕ Add Job'}
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4">
+                            {editingJob ? 'Edit Job' : 'New Job'}
                         </h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Title</label>
                                 <input
                                     type="text"
                                     value={jobForm.title}
                                     onChange={(e) => setJobForm({...jobForm, title: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-violet-500"
                                     placeholder="e.g., Vacuum living room"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Value ($)</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Value ($)</label>
                                 <input
                                     type="number"
                                     step="0.25"
                                     min="0"
                                     value={(jobForm.value / 100).toFixed(2)}
                                     onChange={(e) => setJobForm({...jobForm, value: Math.round(parseFloat(e.target.value || 0) * 100)})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Frequency</label>
                                 <select
                                     value={jobForm.recurrence}
                                     onChange={(e) => setJobForm({...jobForm, recurrence: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
                                 >
                                     <option value={RECURRENCE_TYPE.DAILY}>Daily</option>
                                     <option value={RECURRENCE_TYPE.WEEKLY}>Weekly</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Unlock after completing # daily chores
+                                <label className="block text-sm font-medium text-slate-300 mb-1">
+                                    Unlock after completing # daily tasks
                                 </label>
                                 <input
                                     type="number"
@@ -935,7 +933,7 @@ const FamilyEconomyApp = () => {
                                         ...jobForm,
                                         unlockConditions: {...jobForm.unlockConditions, dailyChores: parseInt(e.target.value) || 0}
                                     })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
                                 />
                             </div>
                             <div className="flex items-center gap-3">
@@ -948,15 +946,15 @@ const FamilyEconomyApp = () => {
                                         allowMultipleCompletions: e.target.checked,
                                         maxCompletionsPerPeriod: e.target.checked ? (jobForm.maxCompletionsPerPeriod || 3) : null
                                     })}
-                                    className="w-5 h-5 rounded"
+                                    className="w-5 h-5 rounded bg-slate-700 border-slate-600"
                                 />
-                                <label htmlFor="allowMultiple" className="text-sm font-medium text-gray-700">
+                                <label htmlFor="allowMultiple" className="text-sm font-medium text-slate-300">
                                     Allow multiple completions per day
                                 </label>
                             </div>
                             {jobForm.allowMultipleCompletions && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">
                                         Max completions per day
                                     </label>
                                     <input
@@ -967,7 +965,7 @@ const FamilyEconomyApp = () => {
                                             ...jobForm,
                                             maxCompletionsPerPeriod: parseInt(e.target.value) || 1
                                         })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
                                     />
                                 </div>
                             )}
@@ -977,23 +975,23 @@ const FamilyEconomyApp = () => {
                                     id="requiresApproval"
                                     checked={jobForm.requiresApproval}
                                     onChange={(e) => setJobForm({...jobForm, requiresApproval: e.target.checked})}
-                                    className="w-5 h-5 rounded"
+                                    className="w-5 h-5 rounded bg-slate-700 border-slate-600"
                                 />
-                                <label htmlFor="requiresApproval" className="text-sm font-medium text-gray-700">
+                                <label htmlFor="requiresApproval" className="text-sm font-medium text-slate-300">
                                     Requires parent approval
                                 </label>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-slate-300 mb-1">
                                     Assign To (optional)
                                 </label>
-                                <p className="text-xs text-gray-500 mb-2">
+                                <p className="text-xs text-slate-500 mb-2">
                                     Leave empty to save to library. Select people to make it active.
                                 </p>
                                 {assignableUsers.length === 0 ? (
-                                    <p className="text-xs text-yellow-600">No family members yet. Job will be saved to library.</p>
+                                    <p className="text-xs text-amber-400">No family members yet. Job will be saved to library.</p>
                                 ) : (
-                                    <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
+                                    <div className="flex flex-wrap gap-2 p-2 border border-slate-600 rounded-lg bg-slate-900/50">
                                         {assignableUsers.map(user => (
                                             <button
                                                 key={user.id}
@@ -1001,8 +999,8 @@ const FamilyEconomyApp = () => {
                                                 onClick={() => toggleJobAssignment(user.id)}
                                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                                                     jobForm.assignTo.includes(user.id)
-                                                        ? 'bg-purple-500 text-white'
-                                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                                        ? 'bg-violet-600 text-white'
+                                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                                 }`}
                                             >
                                                 <span>{user.avatar}</span>
@@ -1017,13 +1015,13 @@ const FamilyEconomyApp = () => {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={closeJobEditor}
-                                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                                className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSaveJob}
-                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                                className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold"
                             >
                                 {editingJob
                                     ? 'Save'
@@ -1041,29 +1039,29 @@ const FamilyEconomyApp = () => {
             {/* User Editor Modal */}
             {showUserEditor && (
                 <div className="modal-overlay" onClick={() => setShowUserEditor(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold text-purple-600 mb-4">
-                            {editingUser ? '✏️ Edit Family Member' : '➕ Add Family Member'}
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4">
+                            {editingUser ? 'Edit Family Member' : 'Add Family Member'}
                         </h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Name</label>
                                 <input
                                     type="text"
                                     value={userForm.name}
                                     onChange={(e) => setUserForm({...userForm, name: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-violet-500"
                                     placeholder="e.g., Emma"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Avatar</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Avatar</label>
                                 <div className="flex flex-wrap gap-2">
                                     {['👧', '👦', '👩', '👨', '👶', '🧒', '👱‍♀️', '👱', '🧑', '👴', '👵'].map(emoji => (
                                         <button
                                             key={emoji}
                                             onClick={() => setUserForm({...userForm, avatar: emoji})}
-                                            className={`text-2xl p-2 rounded-lg ${userForm.avatar === emoji ? 'bg-purple-100 ring-2 ring-purple-500' : 'bg-gray-100'}`}
+                                            className={`text-2xl p-2 rounded-lg ${userForm.avatar === emoji ? 'bg-violet-600 ring-2 ring-violet-400' : 'bg-slate-700 hover:bg-slate-600'}`}
                                         >
                                             {emoji}
                                         </button>
@@ -1071,11 +1069,11 @@ const FamilyEconomyApp = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Role</label>
                                 <select
                                     value={userForm.role}
                                     onChange={(e) => setUserForm({...userForm, role: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
                                 >
                                     <option value="child">Child</option>
                                     <option value="parent">Parent</option>
@@ -1085,13 +1083,13 @@ const FamilyEconomyApp = () => {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => setShowUserEditor(false)}
-                                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                                className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSaveUser}
-                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
+                                className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold"
                             >
                                 Save
                             </button>
@@ -1103,27 +1101,27 @@ const FamilyEconomyApp = () => {
             {/* Parent Review Modal */}
             {showParentReview && (
                 <div className="modal-overlay" onClick={() => setShowParentReview(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', maxHeight: '80vh', overflow: 'auto' }}>
-                        <h2 className="text-xl font-bold text-purple-600 mb-4">
-                            👨‍👩‍👧 Parent Review
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', maxHeight: '80vh', overflow: 'auto' }}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4">
+                            Parent Review
                         </h2>
                         {pendingApprovalsCount === 0 ? (
-                            <p className="text-gray-600 text-center py-4">No items pending approval!</p>
+                            <p className="text-slate-400 text-center py-4">No items pending approval!</p>
                         ) : (
                             <div className="space-y-4">
                                 {/* Pending Chores */}
                                 {choresNeedingApproval.length > 0 && (
                                     <>
-                                        <h3 className="font-semibold text-gray-700 text-sm">📋 Chores</h3>
+                                        <h3 className="font-semibold text-slate-300 text-sm">Tasks</h3>
                                         {choresNeedingApproval.map(chore => {
                                             const user = economy.users.find(u => u.id === chore.userId);
                                             return (
-                                                <div key={chore.id} className="bg-blue-50 rounded-xl p-4">
+                                                <div key={chore.id} className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
                                                     <div className="flex items-center gap-3 mb-3">
-                                                        <span className="text-2xl">{chore.icon || '📋'}</span>
+                                                        <span className="text-2xl">{chore.icon || '✓'}</span>
                                                         <div className="flex-1">
-                                                            <div className="font-semibold text-gray-800">{chore.name}</div>
-                                                            <div className="text-sm text-gray-500">
+                                                            <div className="font-semibold text-slate-100">{chore.name}</div>
+                                                            <div className="text-sm text-slate-400">
                                                                 {user?.name}
                                                             </div>
                                                         </div>
@@ -1134,7 +1132,7 @@ const FamilyEconomyApp = () => {
                                                                 economy.approveChore(chore.id, 'parent');
                                                                 soundSystem.approved();
                                                             }}
-                                                            className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
+                                                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold"
                                                         >
                                                             ✓ Approve
                                                         </button>
@@ -1143,7 +1141,7 @@ const FamilyEconomyApp = () => {
                                                                 economy.updateChore(chore.id, { pendingApproval: false, completed: false });
                                                                 soundSystem.rejected();
                                                             }}
-                                                            className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
+                                                            className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-semibold"
                                                         >
                                                             ✕ Reject
                                                         </button>
@@ -1157,19 +1155,19 @@ const FamilyEconomyApp = () => {
                                 {/* Pending Jobs */}
                                 {economy.jobsNeedingApproval.length > 0 && (
                                     <>
-                                        <h3 className="font-semibold text-gray-700 text-sm">💼 Jobs</h3>
+                                        <h3 className="font-semibold text-slate-300 text-sm mt-4">Jobs</h3>
                                         {economy.jobsNeedingApproval.map(job => {
                                             const pendingCount = job.completions.filter(c => c.status === 'pending').length;
                                             const pendingValue = pendingCount * job.value;
                                             const user = economy.users.find(u => u.id === job.userId);
                                             return (
-                                                <div key={job.id} className="bg-green-50 rounded-xl p-4">
+                                                <div key={job.id} className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
                                                     <div className="flex items-center gap-3 mb-3">
-                                                        <span className="text-2xl">{job.icon || '💼'}</span>
+                                                        <span className="text-2xl">{job.icon || '💵'}</span>
                                                         <div className="flex-1">
-                                                            <div className="font-semibold text-gray-800">{job.title}</div>
-                                                            <div className="text-sm text-gray-500">
-                                                                {user?.name} • {pendingCount}x = {formatCents(pendingValue)}
+                                                            <div className="font-semibold text-slate-100">{job.title}</div>
+                                                            <div className="text-sm text-slate-400">
+                                                                {user?.name} • {pendingCount}x = <span className="text-emerald-400">{formatCents(pendingValue)}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1180,7 +1178,7 @@ const FamilyEconomyApp = () => {
                                                                 soundSystem.approved();
                                                                 soundSystem.cashRegister();
                                                             }}
-                                                            className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold"
+                                                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold"
                                                         >
                                                             ✓ Approve
                                                         </button>
@@ -1189,7 +1187,7 @@ const FamilyEconomyApp = () => {
                                                                 economy.rejectJob(job.id, 'parent');
                                                                 soundSystem.rejected();
                                                             }}
-                                                            className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
+                                                            className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-semibold"
                                                         >
                                                             ✕ Reject
                                                         </button>
@@ -1203,7 +1201,7 @@ const FamilyEconomyApp = () => {
                         )}
                         <button
                             onClick={() => setShowParentReview(false)}
-                            className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                            className="w-full mt-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold"
                         >
                             Close
                         </button>
@@ -1214,9 +1212,9 @@ const FamilyEconomyApp = () => {
             {/* Unified Management Modal */}
             {showManagement && (
                 <div className="modal-overlay" onClick={() => setShowManagement(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}>
-                        <h2 className="text-xl font-bold text-purple-600 mb-4">
-                            ⚙️ Manage Chores & Jobs
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4">
+                            Manage Tasks & Jobs
                         </h2>
 
                         {/* Tabs */}
@@ -1228,11 +1226,11 @@ const FamilyEconomyApp = () => {
                                 }}
                                 className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
                                     managementTab === 'chores'
-                                        ? 'bg-purple-500 text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        ? 'bg-violet-600 text-white'
+                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                 }`}
                             >
-                                📋 Chores
+                                Tasks
                             </button>
                             <button
                                 onClick={() => {
@@ -1241,11 +1239,11 @@ const FamilyEconomyApp = () => {
                                 }}
                                 className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
                                     managementTab === 'jobs'
-                                        ? 'bg-purple-500 text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        ? 'bg-violet-600 text-white'
+                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                 }`}
                             >
-                                💼 Jobs
+                                Jobs
                             </button>
                             <button
                                 onClick={() => {
@@ -1254,13 +1252,13 @@ const FamilyEconomyApp = () => {
                                 }}
                                 className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
                                     managementTab === 'library'
-                                        ? 'bg-purple-500 text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        ? 'bg-violet-600 text-white'
+                                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                 }`}
                             >
-                                📚 Library
+                                Library
                                 {(libraryChores.length > 0 || libraryJobs.length > 0) && (
-                                    <span className="ml-1 bg-gray-300 text-gray-700 text-xs px-1.5 py-0.5 rounded-full">
+                                    <span className="ml-1 bg-violet-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                                         {libraryChores.length + libraryJobs.length}
                                     </span>
                                 )}
@@ -1270,8 +1268,8 @@ const FamilyEconomyApp = () => {
                         {/* Chores Tab Content */}
                         {managementTab === 'chores' && (
                             <div className="space-y-4">
-                                <p className="text-sm text-gray-600 mb-2">
-                                    Create chores and assign them to family members.
+                                <p className="text-sm text-slate-400 mb-2">
+                                    Create tasks and assign them to family members.
                                 </p>
 
                                 {/* Add New Chore Button */}
@@ -1281,31 +1279,31 @@ const FamilyEconomyApp = () => {
                                         setShowManagement(false);
                                         openChoreEditor();
                                     }}
-                                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
+                                    className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
                                 >
-                                    <span>➕</span> Create New Chore
+                                    <span>+</span> Create New Task
                                 </button>
 
                                 {/* Existing Chores List - Grouped */}
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold text-gray-700">All Chores:</h4>
+                                    <h4 className="font-semibold text-slate-300">All Tasks:</h4>
                                     {Object.keys(groupedChores).length === 0 ? (
-                                        <p className="text-gray-500 text-sm">No chores created yet.</p>
+                                        <p className="text-slate-500 text-sm">No tasks created yet.</p>
                                     ) : (
                                         Object.values(groupedChores).map((group, idx) => (
-                                            <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                                            <div key={idx} className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-2xl">{group.icon}</span>
                                                     <div className="flex-1">
-                                                        <div className="font-medium">{group.name}</div>
-                                                        <div className="text-xs text-gray-500">{group.recurrence}</div>
+                                                        <div className="font-medium text-slate-100">{group.name}</div>
+                                                        <div className="text-xs text-slate-400">{group.recurrence}</div>
                                                     </div>
                                                 </div>
                                                 <div className="mt-2 flex flex-wrap gap-1">
                                                     {group.assignments.map(assignment => (
                                                         <span
                                                             key={assignment.choreId}
-                                                            className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs"
+                                                            className="inline-flex items-center gap-1 bg-violet-600/30 text-violet-300 px-2 py-1 rounded-full text-xs border border-violet-500/30"
                                                         >
                                                             <span>{assignment.userAvatar}</span>
                                                             <span>{assignment.userName}</span>
@@ -1318,10 +1316,10 @@ const FamilyEconomyApp = () => {
                                                                         openChoreEditor(chore);
                                                                     }
                                                                 }}
-                                                                className="ml-1 text-purple-500 hover:text-purple-700"
+                                                                className="ml-1 text-violet-400 hover:text-violet-200"
                                                                 title="Edit this assignment"
                                                             >
-                                                                ✏️
+                                                                ✎
                                                             </button>
                                                         </span>
                                                     ))}
@@ -1336,7 +1334,7 @@ const FamilyEconomyApp = () => {
                         {/* Jobs Tab Content */}
                         {managementTab === 'jobs' && (
                             <div className="space-y-4">
-                                <p className="text-sm text-gray-600 mb-2">
+                                <p className="text-sm text-slate-400 mb-2">
                                     Create paid jobs and assign them to family members.
                                 </p>
 
@@ -1347,25 +1345,25 @@ const FamilyEconomyApp = () => {
                                         setShowManagement(false);
                                         openJobEditor();
                                     }}
-                                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
+                                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
                                 >
-                                    <span>➕</span> Create New Job
+                                    <span>+</span> Create New Job
                                 </button>
 
                                 {/* Existing Jobs List - Grouped */}
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold text-gray-700">All Jobs:</h4>
+                                    <h4 className="font-semibold text-slate-300">All Jobs:</h4>
                                     {Object.keys(groupedJobs).length === 0 ? (
-                                        <p className="text-gray-500 text-sm">No jobs created yet.</p>
+                                        <p className="text-slate-500 text-sm">No jobs created yet.</p>
                                     ) : (
                                         Object.values(groupedJobs).map((group, idx) => (
-                                            <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                                            <div key={idx} className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-2xl">{group.icon}</span>
                                                     <div className="flex-1">
-                                                        <div className="font-medium">{group.title}</div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {formatCents(group.value)} • {group.recurrence}
+                                                        <div className="font-medium text-slate-100">{group.title}</div>
+                                                        <div className="text-xs text-slate-400">
+                                                            <span className="text-emerald-400">{formatCents(group.value)}</span> • {group.recurrence}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1373,7 +1371,7 @@ const FamilyEconomyApp = () => {
                                                     {group.assignments.map(assignment => (
                                                         <span
                                                             key={assignment.jobId}
-                                                            className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs"
+                                                            className="inline-flex items-center gap-1 bg-emerald-600/30 text-emerald-300 px-2 py-1 rounded-full text-xs border border-emerald-500/30"
                                                         >
                                                             <span>{assignment.userAvatar}</span>
                                                             <span>{assignment.userName}</span>
@@ -1386,10 +1384,10 @@ const FamilyEconomyApp = () => {
                                                                         openJobEditor(job);
                                                                     }
                                                                 }}
-                                                                className="ml-1 text-green-500 hover:text-green-700"
+                                                                className="ml-1 text-emerald-400 hover:text-emerald-200"
                                                                 title="Edit this assignment"
                                                             >
-                                                                ✏️
+                                                                ✎
                                                             </button>
                                                         </span>
                                                     ))}
@@ -1404,22 +1402,22 @@ const FamilyEconomyApp = () => {
                         {/* Library Tab Content - Unassigned chores and jobs */}
                         {managementTab === 'library' && (
                             <div className="space-y-4">
-                                <p className="text-sm text-gray-600 mb-2">
-                                    Unassigned chores and jobs. Edit to assign to family members.
+                                <p className="text-sm text-slate-400 mb-2">
+                                    Unassigned tasks and jobs. Edit to assign to family members.
                                 </p>
 
                                 {/* Library Chores */}
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold text-gray-700">📋 Chores in Library:</h4>
+                                    <h4 className="font-semibold text-slate-300">Tasks in Library:</h4>
                                     {libraryChores.length === 0 ? (
-                                        <p className="text-gray-500 text-sm">No unassigned chores. Create a chore and leave assignment empty to add here.</p>
+                                        <p className="text-slate-500 text-sm">No unassigned tasks. Create a task and leave assignment empty to add here.</p>
                                     ) : (
                                         libraryChores.map(chore => (
-                                            <div key={chore.id} className="bg-blue-50 rounded-lg p-3 flex items-center gap-3">
+                                            <div key={chore.id} className="bg-slate-700/50 rounded-lg p-3 flex items-center gap-3 border border-slate-600">
                                                 <span className="text-2xl">{chore.icon}</span>
                                                 <div className="flex-1">
-                                                    <div className="font-medium">{chore.name}</div>
-                                                    <div className="text-xs text-gray-500">{chore.recurrence}</div>
+                                                    <div className="font-medium text-slate-100">{chore.name}</div>
+                                                    <div className="text-xs text-slate-400">{chore.recurrence}</div>
                                                 </div>
                                                 <button
                                                     onClick={() => {
@@ -1427,15 +1425,15 @@ const FamilyEconomyApp = () => {
                                                         setShowManagement(false);
                                                         openChoreEditor(chore);
                                                     }}
-                                                    className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg text-sm font-medium"
+                                                    className="bg-violet-600 hover:bg-violet-500 text-white px-3 py-1 rounded-lg text-sm font-medium"
                                                 >
                                                     Assign
                                                 </button>
                                                 <button
                                                     onClick={() => economy.deleteChore(chore.id)}
-                                                    className="text-red-500 hover:text-red-700 px-2"
+                                                    className="text-red-400 hover:text-red-300 px-2"
                                                 >
-                                                    🗑️
+                                                    ✕
                                                 </button>
                                             </div>
                                         ))
@@ -1444,17 +1442,17 @@ const FamilyEconomyApp = () => {
 
                                 {/* Library Jobs */}
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold text-gray-700">💼 Jobs in Library:</h4>
+                                    <h4 className="font-semibold text-slate-300">Jobs in Library:</h4>
                                     {libraryJobs.length === 0 ? (
-                                        <p className="text-gray-500 text-sm">No unassigned jobs. Create a job and leave assignment empty to add here.</p>
+                                        <p className="text-slate-500 text-sm">No unassigned jobs. Create a job and leave assignment empty to add here.</p>
                                     ) : (
                                         libraryJobs.map(job => (
-                                            <div key={job.id} className="bg-green-50 rounded-lg p-3 flex items-center gap-3">
-                                                <span className="text-2xl">{job.icon || '💼'}</span>
+                                            <div key={job.id} className="bg-slate-700/50 rounded-lg p-3 flex items-center gap-3 border border-slate-600">
+                                                <span className="text-2xl">{job.icon || '💵'}</span>
                                                 <div className="flex-1">
-                                                    <div className="font-medium">{job.title}</div>
-                                                    <div className="text-xs text-gray-500">
-                                                        {formatCents(job.value)} • {job.recurrence}
+                                                    <div className="font-medium text-slate-100">{job.title}</div>
+                                                    <div className="text-xs text-slate-400">
+                                                        <span className="text-emerald-400">{formatCents(job.value)}</span> • {job.recurrence}
                                                     </div>
                                                 </div>
                                                 <button
@@ -1463,15 +1461,15 @@ const FamilyEconomyApp = () => {
                                                         setShowManagement(false);
                                                         openJobEditor(job);
                                                     }}
-                                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium"
+                                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-sm font-medium"
                                                 >
                                                     Assign
                                                 </button>
                                                 <button
                                                     onClick={() => economy.deleteJob(job.id)}
-                                                    className="text-red-500 hover:text-red-700 px-2"
+                                                    className="text-red-400 hover:text-red-300 px-2"
                                                 >
-                                                    🗑️
+                                                    ✕
                                                 </button>
                                             </div>
                                         ))
@@ -1482,7 +1480,7 @@ const FamilyEconomyApp = () => {
 
                         <button
                             onClick={() => setShowManagement(false)}
-                            className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
+                            className="w-full mt-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold"
                         >
                             Close
                         </button>
@@ -1633,36 +1631,36 @@ const ChoreCardSimple = ({ chore, onComplete }) => {
     // Determine card state and styling
     const getCardStyle = () => {
         if (isCompleted && !isPending) {
-            return 'bg-green-100 border-2 border-green-400';
+            return 'bg-emerald-900/40 border border-emerald-500/50';
         }
         if (isPending) {
-            return 'bg-yellow-50 border-2 border-yellow-400';
+            return 'bg-amber-900/30 border border-amber-500/50';
         }
-        return 'bg-white border-2 border-transparent hover:border-gray-200';
+        return 'bg-slate-800 border border-slate-700 hover:border-slate-600';
     };
 
     return (
-        <div className={`rounded-xl p-4 shadow-lg transition-all ${getCardStyle()}`}>
+        <div className={`rounded-xl p-4 transition-all ${getCardStyle()}`}>
             <div className="flex items-center gap-3">
                 {/* Status indicator overlay on icon */}
                 <div className="relative">
                     <span className={`text-3xl ${isCompleted ? 'opacity-50' : ''}`}>{chore.icon}</span>
                     {isCompleted && !isPending && (
-                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full w-5 h-5 flex items-center justify-center">
-                            <span className="text-white text-xs">✓</span>
+                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">✓</span>
                         </div>
                     )}
                     {isPending && (
-                        <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full w-5 h-5 flex items-center justify-center">
-                            <span className="text-white text-xs">⏳</span>
+                        <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs">◔</span>
                         </div>
                     )}
                 </div>
                 <div className="flex-1">
-                    <div className={`font-semibold ${isCompleted ? 'text-green-700' : isPending ? 'text-yellow-700' : 'text-gray-800'}`}>
+                    <div className={`font-semibold ${isCompleted ? 'text-emerald-400' : isPending ? 'text-amber-400' : 'text-slate-100'}`}>
                         {chore.name}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-slate-400">
                         {chore.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
                     </div>
                 </div>
@@ -1670,19 +1668,19 @@ const ChoreCardSimple = ({ chore, onComplete }) => {
                     {!isCompleted && !isPending && (
                         <button
                             onClick={onComplete}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold"
                         >
                             ✓ Done
                         </button>
                     )}
                     {isPending && (
-                        <div className="bg-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-sm font-bold">
+                        <div className="bg-amber-500/20 text-amber-400 border border-amber-500/50 px-3 py-2 rounded-lg text-sm font-bold">
                             PENDING
                         </div>
                     )}
                     {isCompleted && !isPending && (
-                        <div className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold">
-                            COMPLETE
+                        <div className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 px-3 py-2 rounded-lg text-sm font-bold">
+                            DONE
                         </div>
                     )}
                 </div>
@@ -1731,52 +1729,52 @@ const JobCardSimple = ({ job, chores, onComplete }) => {
     // Determine card state and styling
     const getCardStyle = () => {
         if (isLocked) {
-            return 'bg-gray-100 border-2 border-gray-300 opacity-60';
+            return 'bg-slate-800/50 border border-slate-600 opacity-60';
         }
         if (isDone && !hasPending) {
-            return 'bg-green-100 border-2 border-green-400';
+            return 'bg-emerald-900/40 border border-emerald-500/50';
         }
         if (hasPending) {
-            return 'bg-yellow-50 border-2 border-yellow-400';
+            return 'bg-amber-900/30 border border-amber-500/50';
         }
-        return 'bg-white border-2 border-transparent hover:border-gray-200';
+        return 'bg-slate-800 border border-slate-700 hover:border-slate-600';
     };
 
     return (
-        <div className={`rounded-xl p-4 shadow-lg transition-all ${getCardStyle()}`}>
+        <div className={`rounded-xl p-4 transition-all ${getCardStyle()}`}>
             <div className="flex items-center gap-3">
                 {/* Status indicator overlay on icon */}
                 <div className="relative">
-                    <span className={`text-3xl ${isDone ? 'opacity-50' : ''}`}>{job.icon || '💼'}</span>
+                    <span className={`text-3xl ${isDone ? 'opacity-50' : ''}`}>{job.icon || '💵'}</span>
                     {isDone && !hasPending && (
-                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full w-5 h-5 flex items-center justify-center">
-                            <span className="text-white text-xs">✓</span>
+                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">✓</span>
                         </div>
                     )}
                     {hasPending && (
-                        <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full w-5 h-5 flex items-center justify-center">
-                            <span className="text-white text-xs">⏳</span>
+                        <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs">◔</span>
                         </div>
                     )}
                     {isLocked && (
-                        <div className="absolute -top-1 -right-1 bg-gray-500 rounded-full w-5 h-5 flex items-center justify-center">
+                        <div className="absolute -top-1 -right-1 bg-slate-500 rounded-full w-5 h-5 flex items-center justify-center">
                             <span className="text-white text-xs">🔒</span>
                         </div>
                     )}
                 </div>
                 <div className="flex-1">
-                    <div className={`font-semibold ${isDone ? 'text-green-700' : hasPending ? 'text-yellow-700' : isLocked ? 'text-gray-500' : 'text-gray-800'}`}>
+                    <div className={`font-semibold ${isDone ? 'text-emerald-400' : hasPending ? 'text-amber-400' : isLocked ? 'text-slate-500' : 'text-slate-100'}`}>
                         {job.title}
                     </div>
-                    <div className="text-sm text-gray-500">
-                        {formatCents(job.value)} • {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
+                    <div className="text-sm text-slate-400">
+                        <span className="text-emerald-400">{formatCents(job.value)}</span> • {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
                         {job.allowMultipleCompletions && maxCompletions &&
                             ` • ${completionCount}/${maxCompletions}`
                         }
                     </div>
                     {isLocked && (
-                        <div className="text-xs text-orange-600 mt-1">
-                            Complete {job.unlockConditions?.dailyChores || 0} daily chores to unlock
+                        <div className="text-xs text-amber-500 mt-1">
+                            Complete {job.unlockConditions?.dailyChores || 0} daily tasks to unlock
                         </div>
                     )}
                 </div>
@@ -1784,19 +1782,19 @@ const JobCardSimple = ({ job, chores, onComplete }) => {
                     {canComplete && (
                         <button
                             onClick={() => onComplete(1)}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold"
                         >
                             ✓ Done
                         </button>
                     )}
                     {hasPending && (
-                        <div className="bg-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-sm font-bold">
+                        <div className="bg-amber-500/20 text-amber-400 border border-amber-500/50 px-3 py-2 rounded-lg text-sm font-bold">
                             PENDING
                         </div>
                     )}
                     {isDone && !hasPending && (
-                        <div className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold">
-                            COMPLETE
+                        <div className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 px-3 py-2 rounded-lg text-sm font-bold">
+                            DONE
                         </div>
                     )}
                 </div>
