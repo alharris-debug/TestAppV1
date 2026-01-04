@@ -286,13 +286,17 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
         const chore = chores.find(c => c.id === choreId);
         if (!chore || chore.completed) return;
 
+        // Parents don't need approval for their own completions
+        const isParentCompleting = activeUser?.role === USER_ROLE.PARENT;
+        const needsApproval = settings.requireApprovalForChores && !isParentCompleting;
+
         setChores(prev =>
             prev.map(c =>
                 c.id === choreId
                     ? {
                         ...c,
                         completed: true,
-                        pendingApproval: settings.requireApprovalForChores,
+                        pendingApproval: needsApproval,
                         completedAt: new Date().toISOString()
                     }
                     : c
@@ -526,13 +530,21 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
             return { success: false, reason };
         }
 
-        const updatedJob = completeJob(job, count);
+        // Parents don't need approval for their own job completions
+        const isParentCompleting = activeUser?.role === USER_ROLE.PARENT;
+        const needsApproval = job.requiresApproval && !isParentCompleting;
+
+        // Create completion with appropriate approval status
+        const updatedJob = needsApproval
+            ? completeJob(job, count)
+            : completeJob({ ...job, requiresApproval: false }, count);
+
         setJobs(prev =>
             prev.map(j => j.id === jobId ? updatedJob : j)
         );
 
         // Update user's pending balance if requires approval
-        if (job.requiresApproval) {
+        if (needsApproval) {
             const earned = job.value * count;
             const user = users.find(u => u.id === job.userId);
             if (user) {
@@ -541,7 +553,7 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
                 });
             }
         } else {
-            // Auto-approved - add directly to balance
+            // Auto-approved (or parent completing) - add directly to balance
             const earned = job.value * count;
             const user = users.find(u => u.id === job.userId);
             if (user) {
@@ -565,7 +577,7 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
 
         soundSystem?.purchase?.();
         return { success: true, earned: job.value * count, jobTitle: job.title };
-    }, [jobs, chores, weeklyResetDay, users, updateUser, soundSystem]);
+    }, [jobs, chores, weeklyResetDay, users, activeUser, updateUser, soundSystem]);
 
     /**
      * Approve all pending completions for a job

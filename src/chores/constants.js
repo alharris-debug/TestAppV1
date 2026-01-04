@@ -41,7 +41,6 @@ export const REPEAT_TYPES = {
 export const DEFAULT_CHORE_FORM = {
     name: '',
     icon: '📋',
-    points: 5,
     repeatType: REPEAT_TYPES.DAILY
 };
 

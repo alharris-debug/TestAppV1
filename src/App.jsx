@@ -98,6 +98,23 @@ const FamilyEconomyApp = () => {
     // Track if editor was opened from management modal (to return there after save)
     const [openedFromManagement, setOpenedFromManagement] = useState(false);
 
+    // Helper to close editor and return to management modal if needed
+    const closeChoreEditor = () => {
+        setShowChoreEditor(false);
+        if (openedFromManagement) {
+            setShowManagement(true);
+            setOpenedFromManagement(false);
+        }
+    };
+
+    const closeJobEditor = () => {
+        setShowJobEditor(false);
+        if (openedFromManagement) {
+            setShowManagement(true);
+            setOpenedFromManagement(false);
+        }
+    };
+
     // Toggle user selection for multi-select
     const toggleChoreAssignment = (userId) => {
         setChoreForm(prev => ({
@@ -123,7 +140,6 @@ const FamilyEconomyApp = () => {
             setChoreForm({
                 name: chore.name || '',
                 icon: chore.icon || '📋',
-                points: chore.points || 5,
                 repeatType: chore.recurrence || RECURRENCE_TYPE.DAILY,
                 assignTo: [chore.userId] // Single user when editing existing
             });
@@ -180,25 +196,23 @@ const FamilyEconomyApp = () => {
         const choreData = {
             name: choreForm.name,
             icon: choreForm.icon,
-            points: choreForm.points,
             recurrence: choreForm.repeatType
         };
 
         if (editingChore) {
-            // Update existing chore - only update for first selected user
+            // Update existing chore
             economy.updateChore(editingChore.id, { ...choreData, userId: choreForm.assignTo[0] });
+            // If additional users selected, create new chores for them
+            choreForm.assignTo.slice(1).forEach(userId => {
+                economy.addChore(choreData, userId);
+            });
         } else {
             // Create new chore for each selected user
             choreForm.assignTo.forEach(userId => {
                 economy.addChore(choreData, userId);
             });
         }
-        setShowChoreEditor(false);
-        // Return to management modal if opened from there
-        if (openedFromManagement) {
-            setShowManagement(true);
-            setOpenedFromManagement(false);
-        }
+        closeChoreEditor();
     };
 
     const handleSaveJob = () => {
@@ -218,20 +232,19 @@ const FamilyEconomyApp = () => {
         };
 
         if (editingJob) {
-            // Update existing job - only update for first selected user
+            // Update existing job
             economy.updateJob(editingJob.id, { ...jobData, userId: jobForm.assignTo[0] });
+            // If additional users selected, create new jobs for them
+            jobForm.assignTo.slice(1).forEach(userId => {
+                economy.addJob(jobData, userId);
+            });
         } else {
             // Create new job for each selected user
             jobForm.assignTo.forEach(userId => {
                 economy.addJob(jobData, userId);
             });
         }
-        setShowJobEditor(false);
-        // Return to management modal if opened from there
-        if (openedFromManagement) {
-            setShowManagement(true);
-            setOpenedFromManagement(false);
-        }
+        closeJobEditor();
     };
 
     const handleSaveUser = () => {
@@ -271,7 +284,6 @@ const FamilyEconomyApp = () => {
         name: '',
         title: '',
         icon: '📋',
-        points: 5,
         value: 100,
         recurrence: RECURRENCE_TYPE.DAILY,
         unlockConditions: { dailyChores: 0, weeklyChores: 0 },
@@ -306,7 +318,6 @@ const FamilyEconomyApp = () => {
                 setTemplateForm({
                     name: template.name || '',
                     icon: template.icon || '📋',
-                    points: template.points || 5,
                     recurrence: template.recurrence || RECURRENCE_TYPE.DAILY,
                     title: '',
                     value: 100,
@@ -325,8 +336,7 @@ const FamilyEconomyApp = () => {
                     unlockConditions: template.unlockConditions || { dailyChores: 0, weeklyChores: 0 },
                     allowMultipleCompletions: template.allowMultipleCompletions || false,
                     maxCompletionsPerPeriod: template.maxCompletionsPerPeriod || null,
-                    requiresApproval: template.requiresApproval !== false,
-                    points: 5
+                    requiresApproval: template.requiresApproval !== false
                 });
             }
         } else {
@@ -335,7 +345,6 @@ const FamilyEconomyApp = () => {
                 name: '',
                 title: '',
                 icon: type === 'chore' ? '📋' : '💼',
-                points: 5,
                 value: 100,
                 recurrence: RECURRENCE_TYPE.DAILY,
                 unlockConditions: { dailyChores: 0, weeklyChores: 0 },
@@ -353,7 +362,6 @@ const FamilyEconomyApp = () => {
             const templateData = {
                 name: templateForm.name,
                 icon: templateForm.icon,
-                points: templateForm.points,
                 recurrence: templateForm.recurrence
             };
             if (editingTemplate) {
@@ -403,6 +411,39 @@ const FamilyEconomyApp = () => {
     // Calculate pending approvals - both jobs and chores
     const choresNeedingApproval = economy.chores.filter(c => c.pendingApproval);
     const pendingApprovalsCount = (economy.jobsNeedingApproval || []).length + choresNeedingApproval.length;
+
+    // Group chores by name+icon+recurrence for management display
+    const groupedChores = economy.chores.reduce((acc, chore) => {
+        const key = `${chore.name}|${chore.icon}|${chore.recurrence}`;
+        if (!acc[key]) {
+            acc[key] = {
+                name: chore.name,
+                icon: chore.icon,
+                recurrence: chore.recurrence,
+                assignments: []
+            };
+        }
+        const user = economy.users.find(u => u.id === chore.userId);
+        acc[key].assignments.push({ choreId: chore.id, userId: chore.userId, userName: user?.name || 'Unknown', userAvatar: user?.avatar || '👤' });
+        return acc;
+    }, {});
+
+    // Group jobs by title+icon+recurrence+value for management display
+    const groupedJobs = economy.jobs.reduce((acc, job) => {
+        const key = `${job.title}|${job.icon}|${job.recurrence}|${job.value}`;
+        if (!acc[key]) {
+            acc[key] = {
+                title: job.title,
+                icon: job.icon || '💼',
+                recurrence: job.recurrence,
+                value: job.value,
+                assignments: []
+            };
+        }
+        const user = economy.users.find(u => u.id === job.userId);
+        acc[key].assignments.push({ jobId: job.id, userId: job.userId, userName: user?.name || 'Unknown', userAvatar: user?.avatar || '👤' });
+        return acc;
+    }, {});
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
@@ -715,7 +756,7 @@ const FamilyEconomyApp = () => {
 
             {/* Chore Editor Modal */}
             {showChoreEditor && (
-                <div className="modal-overlay" onClick={() => setShowChoreEditor(false)}>
+                <div className="modal-overlay" onClick={closeChoreEditor}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <h2 className="text-xl font-bold text-purple-600 mb-4">
                             {editingChore ? '✏️ Edit Chore' : '➕ Add Chore'}
@@ -790,7 +831,7 @@ const FamilyEconomyApp = () => {
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
-                                onClick={() => setShowChoreEditor(false)}
+                                onClick={closeChoreEditor}
                                 className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
                             >
                                 Cancel
@@ -813,7 +854,7 @@ const FamilyEconomyApp = () => {
 
             {/* Job Editor Modal */}
             {showJobEditor && (
-                <div className="modal-overlay" onClick={() => setShowJobEditor(false)}>
+                <div className="modal-overlay" onClick={closeJobEditor}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <h2 className="text-xl font-bold text-purple-600 mb-4">
                             {editingJob ? '✏️ Edit Job' : '➕ Add Job'}
@@ -945,7 +986,7 @@ const FamilyEconomyApp = () => {
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
-                                onClick={() => setShowJobEditor(false)}
+                                onClick={closeJobEditor}
                                 className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold"
                             >
                                 Cancel
@@ -1052,7 +1093,7 @@ const FamilyEconomyApp = () => {
                                                         <div className="flex-1">
                                                             <div className="font-semibold text-gray-800">{chore.name}</div>
                                                             <div className="text-sm text-gray-500">
-                                                                {user?.name} • {chore.points} gems
+                                                                {user?.name}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1187,35 +1228,48 @@ const FamilyEconomyApp = () => {
                                     <span>➕</span> Create New Chore
                                 </button>
 
-                                {/* Existing Chores List */}
+                                {/* Existing Chores List - Grouped */}
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-gray-700">All Chores:</h4>
-                                    {economy.chores.length === 0 ? (
+                                    {Object.keys(groupedChores).length === 0 ? (
                                         <p className="text-gray-500 text-sm">No chores created yet.</p>
                                     ) : (
-                                        economy.chores.map(chore => {
-                                            const assignedUser = economy.users.find(u => u.id === chore.userId);
-                                            return (
-                                                <div key={chore.id} className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
-                                                    <span className="text-2xl">{chore.icon}</span>
+                                        Object.values(groupedChores).map((group, idx) => (
+                                            <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">{group.icon}</span>
                                                     <div className="flex-1">
-                                                        <div className="font-medium">{chore.name}</div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {chore.recurrence} • Assigned to: {assignedUser?.name || 'Unknown'}
-                                                        </div>
+                                                        <div className="font-medium">{group.name}</div>
+                                                        <div className="text-xs text-gray-500">{group.recurrence}</div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            setShowManagement(false);
-                                                            openChoreEditor(chore);
-                                                        }}
-                                                        className="text-purple-600 hover:text-purple-800 px-2"
-                                                    >
-                                                        ✏️
-                                                    </button>
                                                 </div>
-                                            );
-                                        })
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {group.assignments.map(assignment => (
+                                                        <span
+                                                            key={assignment.choreId}
+                                                            className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs"
+                                                        >
+                                                            <span>{assignment.userAvatar}</span>
+                                                            <span>{assignment.userName}</span>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const chore = economy.chores.find(c => c.id === assignment.choreId);
+                                                                    if (chore) {
+                                                                        setOpenedFromManagement(true);
+                                                                        setShowManagement(false);
+                                                                        openChoreEditor(chore);
+                                                                    }
+                                                                }}
+                                                                className="ml-1 text-purple-500 hover:text-purple-700"
+                                                                title="Edit this assignment"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))
                                     )}
                                 </div>
                             </div>
@@ -1240,35 +1294,50 @@ const FamilyEconomyApp = () => {
                                     <span>➕</span> Create New Job
                                 </button>
 
-                                {/* Existing Jobs List */}
+                                {/* Existing Jobs List - Grouped */}
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-gray-700">All Jobs:</h4>
-                                    {economy.jobs.length === 0 ? (
+                                    {Object.keys(groupedJobs).length === 0 ? (
                                         <p className="text-gray-500 text-sm">No jobs created yet.</p>
                                     ) : (
-                                        economy.jobs.map(job => {
-                                            const assignedUser = economy.users.find(u => u.id === job.userId);
-                                            return (
-                                                <div key={job.id} className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
-                                                    <span className="text-2xl">{job.icon || '💼'}</span>
+                                        Object.values(groupedJobs).map((group, idx) => (
+                                            <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">{group.icon}</span>
                                                     <div className="flex-1">
-                                                        <div className="font-medium">{job.title}</div>
+                                                        <div className="font-medium">{group.title}</div>
                                                         <div className="text-xs text-gray-500">
-                                                            {formatCents(job.value)} • {job.recurrence} • {assignedUser?.name || 'Unknown'}
+                                                            {formatCents(group.value)} • {group.recurrence}
                                                         </div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            setShowManagement(false);
-                                                            openJobEditor(job);
-                                                        }}
-                                                        className="text-purple-600 hover:text-purple-800 px-2"
-                                                    >
-                                                        ✏️
-                                                    </button>
                                                 </div>
-                                            );
-                                        })
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {group.assignments.map(assignment => (
+                                                        <span
+                                                            key={assignment.jobId}
+                                                            className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs"
+                                                        >
+                                                            <span>{assignment.userAvatar}</span>
+                                                            <span>{assignment.userName}</span>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const job = economy.jobs.find(j => j.id === assignment.jobId);
+                                                                    if (job) {
+                                                                        setOpenedFromManagement(true);
+                                                                        setShowManagement(false);
+                                                                        openJobEditor(job);
+                                                                    }
+                                                                }}
+                                                                className="ml-1 text-green-500 hover:text-green-700"
+                                                                title="Edit this assignment"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))
                                     )}
                                 </div>
                             </div>
@@ -1334,7 +1403,7 @@ const FamilyEconomyApp = () => {
                                                     <div className="flex-1">
                                                         <div className="font-medium">{template.name}</div>
                                                         <div className="text-xs text-gray-500">
-                                                            {template.recurrence} • {template.points} gems
+                                                            {template.recurrence}
                                                         </div>
                                                     </div>
                                                     <button
@@ -1575,7 +1644,6 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
                     </div>
                     <div className="text-sm text-gray-500">
                         {chore.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
-                        {chore.points && ` • 💎 ${chore.points} gems`}
                     </div>
                 </div>
                 <div className="flex gap-2 items-center">
