@@ -141,7 +141,7 @@ const FamilyEconomyApp = () => {
                 name: chore.name || '',
                 icon: chore.icon || '📋',
                 repeatType: chore.recurrence || RECURRENCE_TYPE.DAILY,
-                assignTo: [chore.userId] // Single user when editing existing
+                assignTo: chore.userId ? [chore.userId] : [] // Empty if unassigned (library item)
             });
             setEditingChore(chore);
         } else {
@@ -163,7 +163,7 @@ const FamilyEconomyApp = () => {
                 maxCompletionsPerPeriod: job.maxCompletionsPerPeriod || null,
                 requiresApproval: job.requiresApproval !== false,
                 description: job.description || '',
-                assignTo: [job.userId] // Single user when editing existing
+                assignTo: job.userId ? [job.userId] : [] // Empty if unassigned (library item)
             });
             setEditingJob(job);
         } else {
@@ -191,7 +191,6 @@ const FamilyEconomyApp = () => {
     // Save handlers
     const handleSaveChore = () => {
         if (!choreForm.name.trim()) return;
-        if (!choreForm.assignTo || choreForm.assignTo.length === 0) return; // Must have assigned user(s)
 
         const choreData = {
             name: choreForm.name,
@@ -200,24 +199,33 @@ const FamilyEconomyApp = () => {
         };
 
         if (editingChore) {
-            // Update existing chore
-            economy.updateChore(editingChore.id, { ...choreData, userId: choreForm.assignTo[0] });
-            // If additional users selected, create new chores for them
-            choreForm.assignTo.slice(1).forEach(userId => {
-                economy.addChore(choreData, userId);
-            });
+            if (choreForm.assignTo.length === 0) {
+                // Unassign - make inactive (set userId to null)
+                economy.updateChore(editingChore.id, { ...choreData, userId: null });
+            } else {
+                // Update existing chore with first selected user
+                economy.updateChore(editingChore.id, { ...choreData, userId: choreForm.assignTo[0] });
+                // If additional users selected, create new chores for them
+                choreForm.assignTo.slice(1).forEach(userId => {
+                    economy.addChore(choreData, userId);
+                });
+            }
         } else {
-            // Create new chore for each selected user
-            choreForm.assignTo.forEach(userId => {
-                economy.addChore(choreData, userId);
-            });
+            if (choreForm.assignTo.length === 0) {
+                // Create unassigned chore (inactive/library item)
+                economy.addChore(choreData, null);
+            } else {
+                // Create new chore for each selected user
+                choreForm.assignTo.forEach(userId => {
+                    economy.addChore(choreData, userId);
+                });
+            }
         }
         closeChoreEditor();
     };
 
     const handleSaveJob = () => {
         if (!jobForm.title.trim()) return;
-        if (!jobForm.assignTo || jobForm.assignTo.length === 0) return; // Must have assigned user(s)
 
         const jobData = {
             title: jobForm.title,
@@ -232,17 +240,27 @@ const FamilyEconomyApp = () => {
         };
 
         if (editingJob) {
-            // Update existing job
-            economy.updateJob(editingJob.id, { ...jobData, userId: jobForm.assignTo[0] });
-            // If additional users selected, create new jobs for them
-            jobForm.assignTo.slice(1).forEach(userId => {
-                economy.addJob(jobData, userId);
-            });
+            if (jobForm.assignTo.length === 0) {
+                // Unassign - make inactive (set userId to null)
+                economy.updateJob(editingJob.id, { ...jobData, userId: null });
+            } else {
+                // Update existing job with first selected user
+                economy.updateJob(editingJob.id, { ...jobData, userId: jobForm.assignTo[0] });
+                // If additional users selected, create new jobs for them
+                jobForm.assignTo.slice(1).forEach(userId => {
+                    economy.addJob(jobData, userId);
+                });
+            }
         } else {
-            // Create new job for each selected user
-            jobForm.assignTo.forEach(userId => {
-                economy.addJob(jobData, userId);
-            });
+            if (jobForm.assignTo.length === 0) {
+                // Create unassigned job (inactive/library item)
+                economy.addJob(jobData, null);
+            } else {
+                // Create new job for each selected user
+                jobForm.assignTo.forEach(userId => {
+                    economy.addJob(jobData, userId);
+                });
+            }
         }
         closeJobEditor();
     };
@@ -412,8 +430,16 @@ const FamilyEconomyApp = () => {
     const choresNeedingApproval = economy.chores.filter(c => c.pendingApproval);
     const pendingApprovalsCount = (economy.jobsNeedingApproval || []).length + choresNeedingApproval.length;
 
-    // Group chores by name+icon+recurrence for management display
-    const groupedChores = economy.chores.reduce((acc, chore) => {
+    // Separate assigned (active) and unassigned (library) chores
+    const activeChores = economy.chores.filter(c => c.userId);
+    const libraryChores = economy.chores.filter(c => !c.userId);
+
+    // Separate assigned (active) and unassigned (library) jobs
+    const activeJobs = economy.jobs.filter(j => j.userId);
+    const libraryJobs = economy.jobs.filter(j => !j.userId);
+
+    // Group active chores by name+icon+recurrence for management display
+    const groupedChores = activeChores.reduce((acc, chore) => {
         const key = `${chore.name}|${chore.icon}|${chore.recurrence}`;
         if (!acc[key]) {
             acc[key] = {
@@ -428,8 +454,8 @@ const FamilyEconomyApp = () => {
         return acc;
     }, {});
 
-    // Group jobs by title+icon+recurrence+value for management display
-    const groupedJobs = economy.jobs.reduce((acc, job) => {
+    // Group active jobs by title+icon+recurrence+value for management display
+    const groupedJobs = activeJobs.reduce((acc, job) => {
         const key = `${job.title}|${job.icon}|${job.recurrence}|${job.value}`;
         if (!acc[key]) {
             acc[key] = {
@@ -558,8 +584,6 @@ const FamilyEconomyApp = () => {
                                         key={chore.id}
                                         chore={chore}
                                         onComplete={() => handleCompleteChore(chore.id)}
-                                        onEdit={() => requireParentAccess(() => openChoreEditor(chore))}
-                                        isParent={isParent}
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.DAILY).length === 0 && (
@@ -579,8 +603,6 @@ const FamilyEconomyApp = () => {
                                         key={chore.id}
                                         chore={chore}
                                         onComplete={() => handleCompleteChore(chore.id)}
-                                        onEdit={() => requireParentAccess(() => openChoreEditor(chore))}
-                                        isParent={isParent}
                                     />
                                 ))}
                                 {userChores.filter(c => c.recurrence === RECURRENCE_TYPE.WEEKLY).length === 0 && (
@@ -619,8 +641,6 @@ const FamilyEconomyApp = () => {
                                 job={job}
                                 chores={userChores}
                                 onComplete={(count) => handleCompleteJob(job.id, count)}
-                                onEdit={() => requireParentAccess(() => openJobEditor(job))}
-                                isParent={isParent}
                             />
                         ))}
 
@@ -799,10 +819,13 @@ const FamilyEconomyApp = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Assign To {!editingChore && '(select one or more)'}
+                                    Assign To (optional)
                                 </label>
+                                <p className="text-xs text-gray-500 mb-2">
+                                    Leave empty to save to library. Select people to make it active.
+                                </p>
                                 {assignableUsers.length === 0 ? (
-                                    <p className="text-xs text-red-500">Add a family member first before creating chores.</p>
+                                    <p className="text-xs text-yellow-600">No family members yet. Chore will be saved to library.</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
                                         {assignableUsers.map(user => (
@@ -818,14 +841,10 @@ const FamilyEconomyApp = () => {
                                             >
                                                 <span>{user.avatar}</span>
                                                 <span>{user.name}</span>
-                                                <span className="text-xs opacity-60">({user.role})</span>
                                                 {choreForm.assignTo.includes(user.id) && <span>✓</span>}
                                             </button>
                                         ))}
                                     </div>
-                                )}
-                                {editingChore && (
-                                    <p className="text-xs text-gray-500 mt-1">Select a different person to reassign this chore.</p>
                                 )}
                             </div>
                         </div>
@@ -838,14 +857,15 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveChore}
-                                disabled={choreForm.assignTo.length === 0 || assignableUsers.length === 0}
-                                className={`flex-1 py-3 rounded-xl font-semibold ${
-                                    choreForm.assignTo.length > 0 && assignableUsers.length > 0
-                                        ? 'bg-purple-500 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
+                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
                             >
-                                {editingChore ? 'Save' : `Create${choreForm.assignTo.length > 1 ? ` for ${choreForm.assignTo.length} people` : ''}`}
+                                {editingChore
+                                    ? 'Save'
+                                    : choreForm.assignTo.length === 0
+                                        ? 'Save to Library'
+                                        : choreForm.assignTo.length > 1
+                                            ? `Create for ${choreForm.assignTo.length} people`
+                                            : 'Create & Assign'}
                             </button>
                         </div>
                     </div>
@@ -954,10 +974,13 @@ const FamilyEconomyApp = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Assign To {!editingJob && '(select one or more)'}
+                                    Assign To (optional)
                                 </label>
+                                <p className="text-xs text-gray-500 mb-2">
+                                    Leave empty to save to library. Select people to make it active.
+                                </p>
                                 {assignableUsers.length === 0 ? (
-                                    <p className="text-xs text-red-500">Add a family member first before creating jobs.</p>
+                                    <p className="text-xs text-yellow-600">No family members yet. Job will be saved to library.</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
                                         {assignableUsers.map(user => (
@@ -973,14 +996,10 @@ const FamilyEconomyApp = () => {
                                             >
                                                 <span>{user.avatar}</span>
                                                 <span>{user.name}</span>
-                                                <span className="text-xs opacity-60">({user.role})</span>
                                                 {jobForm.assignTo.includes(user.id) && <span>✓</span>}
                                             </button>
                                         ))}
                                     </div>
-                                )}
-                                {editingJob && (
-                                    <p className="text-xs text-gray-500 mt-1">Select a different person to reassign this job.</p>
                                 )}
                             </div>
                         </div>
@@ -993,14 +1012,15 @@ const FamilyEconomyApp = () => {
                             </button>
                             <button
                                 onClick={handleSaveJob}
-                                disabled={jobForm.assignTo.length === 0 || assignableUsers.length === 0}
-                                className={`flex-1 py-3 rounded-xl font-semibold ${
-                                    jobForm.assignTo.length > 0 && assignableUsers.length > 0
-                                        ? 'bg-purple-500 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
+                                className="flex-1 py-3 bg-purple-500 text-white rounded-xl font-semibold"
                             >
-                                {editingJob ? 'Save' : `Create${jobForm.assignTo.length > 1 ? ` for ${jobForm.assignTo.length} people` : ''}`}
+                                {editingJob
+                                    ? 'Save'
+                                    : jobForm.assignTo.length === 0
+                                        ? 'Save to Library'
+                                        : jobForm.assignTo.length > 1
+                                            ? `Create for ${jobForm.assignTo.length} people`
+                                            : 'Create & Assign'}
                             </button>
                         </div>
                     </div>
@@ -1198,14 +1218,19 @@ const FamilyEconomyApp = () => {
                                 💼 Jobs
                             </button>
                             <button
-                                onClick={() => setManagementTab('templates')}
+                                onClick={() => setManagementTab('library')}
                                 className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-                                    managementTab === 'templates'
+                                    managementTab === 'library'
                                         ? 'bg-purple-500 text-white'
                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                             >
-                                📑 Templates
+                                📚 Library
+                                {(libraryChores.length > 0 || libraryJobs.length > 0) && (
+                                    <span className="ml-1 bg-gray-300 text-gray-700 text-xs px-1.5 py-0.5 rounded-full">
+                                        {libraryChores.length + libraryJobs.length}
+                                    </span>
+                                )}
                             </button>
                         </div>
 
@@ -1343,137 +1368,77 @@ const FamilyEconomyApp = () => {
                             </div>
                         )}
 
-                        {/* Templates Tab Content */}
-                        {managementTab === 'templates' && (
+                        {/* Library Tab Content - Unassigned chores and jobs */}
+                        {managementTab === 'library' && (
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600 mb-2">
-                                    Create templates and apply them to multiple children at once.
+                                    Unassigned chores and jobs. Edit to assign to family members.
                                 </p>
 
-                                {/* Create Template Buttons */}
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => openTemplateEditor('chore')}
-                                        className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-sm"
-                                    >
-                                        + Chore Template
-                                    </button>
-                                    <button
-                                        onClick={() => openTemplateEditor('job')}
-                                        className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold text-sm"
-                                    >
-                                        + Job Template
-                                    </button>
-                                </div>
-
-                                {/* Child User Selection */}
-                                <div className="bg-blue-50 rounded-lg p-3">
-                                    <h4 className="font-semibold text-gray-700 mb-2">Select Children to Apply Templates:</h4>
-                                    {childUsers.length === 0 ? (
-                                        <p className="text-gray-500 text-sm">No children added yet.</p>
-                                    ) : (
-                                        <div className="flex flex-wrap gap-2">
-                                            {childUsers.map(user => (
-                                                <button
-                                                    key={user.id}
-                                                    onClick={() => toggleUserSelection(user.id)}
-                                                    className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${
-                                                        selectedUsersForTemplate.includes(user.id)
-                                                            ? 'bg-purple-500 text-white'
-                                                            : 'bg-white text-gray-700 border border-gray-300'
-                                                    }`}
-                                                >
-                                                    {user.avatar} {user.name}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Chore Templates */}
+                                {/* Library Chores */}
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold text-gray-700">Chore Templates:</h4>
-                                    {(economy.choreTemplates || []).length === 0 ? (
-                                        <p className="text-gray-500 text-sm">No chore templates yet.</p>
+                                    <h4 className="font-semibold text-gray-700">📋 Chores in Library:</h4>
+                                    {libraryChores.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No unassigned chores. Create a chore and leave assignment empty to add here.</p>
                                     ) : (
-                                        (economy.choreTemplates || []).map(template => (
-                                            <div key={template.id} className="bg-gray-50 rounded-lg p-3">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-2xl">{template.icon}</span>
-                                                    <div className="flex-1">
-                                                        <div className="font-medium">{template.name}</div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {template.recurrence}
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => openTemplateEditor('chore', template)}
-                                                        className="text-purple-600 hover:text-purple-800 px-2"
-                                                    >
-                                                        ✏️
-                                                    </button>
-                                                    <button
-                                                        onClick={() => economy.deleteChoreTemplate(template.id)}
-                                                        className="text-red-500 hover:text-red-700 px-2"
-                                                    >
-                                                        🗑️
-                                                    </button>
+                                        libraryChores.map(chore => (
+                                            <div key={chore.id} className="bg-blue-50 rounded-lg p-3 flex items-center gap-3">
+                                                <span className="text-2xl">{chore.icon}</span>
+                                                <div className="flex-1">
+                                                    <div className="font-medium">{chore.name}</div>
+                                                    <div className="text-xs text-gray-500">{chore.recurrence}</div>
                                                 </div>
                                                 <button
-                                                    onClick={() => handleApplyTemplate(template, 'chore')}
-                                                    disabled={selectedUsersForTemplate.length === 0}
-                                                    className={`mt-2 w-full py-1 rounded-lg text-sm font-medium ${
-                                                        selectedUsersForTemplate.length > 0
-                                                            ? 'bg-purple-500 text-white hover:bg-purple-600'
-                                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                    }`}
+                                                    onClick={() => {
+                                                        setOpenedFromManagement(true);
+                                                        setShowManagement(false);
+                                                        openChoreEditor(chore);
+                                                    }}
+                                                    className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg text-sm font-medium"
                                                 >
-                                                    Apply to {selectedUsersForTemplate.length} selected
+                                                    Assign
+                                                </button>
+                                                <button
+                                                    onClick={() => economy.deleteChore(chore.id)}
+                                                    className="text-red-500 hover:text-red-700 px-2"
+                                                >
+                                                    🗑️
                                                 </button>
                                             </div>
                                         ))
                                     )}
                                 </div>
 
-                                {/* Job Templates */}
+                                {/* Library Jobs */}
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold text-gray-700">Job Templates:</h4>
-                                    {(economy.jobTemplates || []).length === 0 ? (
-                                        <p className="text-gray-500 text-sm">No job templates yet.</p>
+                                    <h4 className="font-semibold text-gray-700">💼 Jobs in Library:</h4>
+                                    {libraryJobs.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No unassigned jobs. Create a job and leave assignment empty to add here.</p>
                                     ) : (
-                                        (economy.jobTemplates || []).map(template => (
-                                            <div key={template.id} className="bg-gray-50 rounded-lg p-3">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-2xl">{template.icon}</span>
-                                                    <div className="flex-1">
-                                                        <div className="font-medium">{template.title}</div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {formatCents(template.value)} • {template.recurrence}
-                                                        </div>
+                                        libraryJobs.map(job => (
+                                            <div key={job.id} className="bg-green-50 rounded-lg p-3 flex items-center gap-3">
+                                                <span className="text-2xl">{job.icon || '💼'}</span>
+                                                <div className="flex-1">
+                                                    <div className="font-medium">{job.title}</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {formatCents(job.value)} • {job.recurrence}
                                                     </div>
-                                                    <button
-                                                        onClick={() => openTemplateEditor('job', template)}
-                                                        className="text-purple-600 hover:text-purple-800 px-2"
-                                                    >
-                                                        ✏️
-                                                    </button>
-                                                    <button
-                                                        onClick={() => economy.deleteJobTemplate(template.id)}
-                                                        className="text-red-500 hover:text-red-700 px-2"
-                                                    >
-                                                        🗑️
-                                                    </button>
                                                 </div>
                                                 <button
-                                                    onClick={() => handleApplyTemplate(template, 'job')}
-                                                    disabled={selectedUsersForTemplate.length === 0}
-                                                    className={`mt-2 w-full py-1 rounded-lg text-sm font-medium ${
-                                                        selectedUsersForTemplate.length > 0
-                                                            ? 'bg-green-500 text-white hover:bg-green-600'
-                                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                    }`}
+                                                    onClick={() => {
+                                                        setOpenedFromManagement(true);
+                                                        setShowManagement(false);
+                                                        openJobEditor(job);
+                                                    }}
+                                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium"
                                                 >
-                                                    Apply to {selectedUsersForTemplate.length} selected
+                                                    Assign
+                                                </button>
+                                                <button
+                                                    onClick={() => economy.deleteJob(job.id)}
+                                                    className="text-red-500 hover:text-red-700 px-2"
+                                                >
+                                                    🗑️
                                                 </button>
                                             </div>
                                         ))
@@ -1628,18 +1593,40 @@ const FamilyEconomyApp = () => {
 
 // ============ SIMPLE CARD COMPONENTS ============
 
-const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
+const ChoreCardSimple = ({ chore, onComplete }) => {
     const isCompleted = chore.completed;
     const isPending = chore.pendingApproval;
 
+    // Determine card state and styling
+    const getCardStyle = () => {
+        if (isCompleted && !isPending) {
+            return 'bg-green-100 border-2 border-green-400';
+        }
+        if (isPending) {
+            return 'bg-yellow-50 border-2 border-yellow-400';
+        }
+        return 'bg-white border-2 border-transparent hover:border-gray-200';
+    };
+
     return (
-        <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
-            isCompleted ? 'bg-green-50 border-2 border-green-200' : ''
-        }`}>
+        <div className={`rounded-xl p-4 shadow-lg transition-all ${getCardStyle()}`}>
             <div className="flex items-center gap-3">
-                <span className={`text-3xl ${isCompleted ? 'grayscale' : ''}`}>{chore.icon}</span>
+                {/* Status indicator overlay on icon */}
+                <div className="relative">
+                    <span className={`text-3xl ${isCompleted ? 'opacity-50' : ''}`}>{chore.icon}</span>
+                    {isCompleted && !isPending && (
+                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                        </div>
+                    )}
+                    {isPending && (
+                        <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs">⏳</span>
+                        </div>
+                    )}
+                </div>
                 <div className="flex-1">
-                    <div className={`font-semibold ${isCompleted ? 'text-green-700 line-through' : 'text-gray-800'}`}>
+                    <div className={`font-semibold ${isCompleted ? 'text-green-700' : isPending ? 'text-yellow-700' : 'text-gray-800'}`}>
                         {chore.name}
                     </div>
                     <div className="text-sm text-gray-500">
@@ -1647,32 +1634,23 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
                     </div>
                 </div>
                 <div className="flex gap-2 items-center">
-                    {isParent && (
-                        <button
-                            onClick={onEdit}
-                            className="bg-purple-100 hover:bg-purple-200 text-purple-600 px-3 py-2 rounded-lg font-semibold text-sm"
-                            title="Edit"
-                        >
-                            ✏️ Edit
-                        </button>
-                    )}
                     {!isCompleted && !isPending && (
                         <button
                             onClick={onComplete}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
+                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md"
                         >
                             ✓ Done
                         </button>
                     )}
                     {isPending && (
-                        <span className="bg-yellow-100 text-yellow-700 px-3 py-2 rounded-lg text-sm font-medium">
-                            ⏳ Pending
-                        </span>
+                        <div className="bg-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-sm font-bold">
+                            PENDING
+                        </div>
                     )}
                     {isCompleted && !isPending && (
-                        <span className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-medium">
-                            ✅ Done!
-                        </span>
+                        <div className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold">
+                            COMPLETE
+                        </div>
                     )}
                 </div>
             </div>
@@ -1680,7 +1658,7 @@ const ChoreCardSimple = ({ chore, onComplete, onEdit, isParent }) => {
     );
 };
 
-const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
+const JobCardSimple = ({ job, chores, onComplete }) => {
     const isLocked = job.isLocked;
 
     // Count completions for current period (uses timestamp, not date)
@@ -1696,6 +1674,17 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
         }
     }).reduce((sum, c) => sum + (c.count || 1), 0) || 0;
 
+    // Check for pending completions in current period
+    const hasPending = job.completions?.some(c => {
+        if (c.status !== 'pending') return false;
+        if (job.recurrence === RECURRENCE_TYPE.DAILY) {
+            const today = new Date().toDateString();
+            return new Date(c.timestamp).toDateString() === today;
+        }
+        // Weekly - all completions in array are current period
+        return true;
+    }) || false;
+
     const maxCompletions = job.maxCompletionsPerPeriod;
     const isMaxedOut = maxCompletions && completionCount >= maxCompletions;
     const hasCompletedOnce = completionCount > 0 && !job.allowMultipleCompletions;
@@ -1706,55 +1695,77 @@ const JobCardSimple = ({ job, chores, onComplete, onEdit, isParent }) => {
     // Can only complete if not locked, not done, and (no max or under max)
     const canComplete = !isLocked && !isDone && (!maxCompletions || completionCount < maxCompletions);
 
+    // Determine card state and styling
+    const getCardStyle = () => {
+        if (isLocked) {
+            return 'bg-gray-100 border-2 border-gray-300 opacity-60';
+        }
+        if (isDone && !hasPending) {
+            return 'bg-green-100 border-2 border-green-400';
+        }
+        if (hasPending) {
+            return 'bg-yellow-50 border-2 border-yellow-400';
+        }
+        return 'bg-white border-2 border-transparent hover:border-gray-200';
+    };
+
     return (
-        <div className={`bg-white rounded-xl p-4 shadow-lg transition-all ${
-            isLocked ? 'opacity-60' : isDone ? 'bg-green-50 border-2 border-green-200' : ''
-        }`}>
+        <div className={`rounded-xl p-4 shadow-lg transition-all ${getCardStyle()}`}>
             <div className="flex items-center gap-3">
-                <span className={`text-3xl ${isDone ? 'grayscale' : ''}`}>{job.icon || '💼'}</span>
+                {/* Status indicator overlay on icon */}
+                <div className="relative">
+                    <span className={`text-3xl ${isDone ? 'opacity-50' : ''}`}>{job.icon || '💼'}</span>
+                    {isDone && !hasPending && (
+                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                        </div>
+                    )}
+                    {hasPending && (
+                        <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs">⏳</span>
+                        </div>
+                    )}
+                    {isLocked && (
+                        <div className="absolute -top-1 -right-1 bg-gray-500 rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="text-white text-xs">🔒</span>
+                        </div>
+                    )}
+                </div>
                 <div className="flex-1">
-                    <div className={`font-semibold ${isDone ? 'text-green-700' : 'text-gray-800'}`}>
+                    <div className={`font-semibold ${isDone ? 'text-green-700' : hasPending ? 'text-yellow-700' : isLocked ? 'text-gray-500' : 'text-gray-800'}`}>
                         {job.title}
                     </div>
                     <div className="text-sm text-gray-500">
-                        {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
+                        {formatCents(job.value)} • {job.recurrence === RECURRENCE_TYPE.DAILY ? 'Daily' : 'Weekly'}
                         {job.allowMultipleCompletions && maxCompletions &&
-                            ` • ${completionCount}/${maxCompletions} ${job.recurrence === RECURRENCE_TYPE.DAILY ? 'today' : 'this week'}`
+                            ` • ${completionCount}/${maxCompletions}`
                         }
                     </div>
                     {isLocked && (
                         <div className="text-xs text-orange-600 mt-1">
-                            🔒 Complete {job.unlockConditions?.dailyChores || 0} daily chores to unlock
+                            Complete {job.unlockConditions?.dailyChores || 0} daily chores to unlock
                         </div>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    {isParent && (
+                    {canComplete && (
                         <button
-                            onClick={onEdit}
-                            className="bg-purple-100 hover:bg-purple-200 text-purple-600 px-3 py-2 rounded-lg font-semibold text-sm"
-                            title="Edit"
+                            onClick={() => onComplete(1)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md"
                         >
-                            ✏️ Edit
+                            ✓ Done
                         </button>
                     )}
-                    <div className="text-right">
-                        <div className={`font-bold text-lg ${isDone ? 'text-green-600' : 'text-green-600'}`}>
-                            {formatCents(job.value)}
+                    {hasPending && (
+                        <div className="bg-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-sm font-bold">
+                            PENDING
                         </div>
-                        {canComplete ? (
-                            <button
-                                onClick={() => onComplete(1)}
-                                className="mt-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold"
-                            >
-                                ✓ Done
-                            </button>
-                        ) : isDone ? (
-                            <span className="mt-1 inline-block bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-medium">
-                                ✅ Done!
-                            </span>
-                        ) : null}
-                    </div>
+                    )}
+                    {isDone && !hasPending && (
+                        <div className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold">
+                            COMPLETE
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
