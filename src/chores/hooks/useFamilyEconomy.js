@@ -246,12 +246,11 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
      * Add a new chore
      */
     const addChore = useCallback((choreData, userId = activeUserId) => {
-        if (!userId) return null;
-
+        // Allow null userId for library items (unassigned chores)
         const newChore = {
             ...createDefaultChore(userId),
             ...choreData,
-            userId
+            userId: userId || null  // Explicitly set to null if undefined
         };
 
         setChores(prev => [...prev, newChore]);
@@ -482,12 +481,11 @@ export const useFamilyEconomy = ({ savedState, soundSystem } = {}) => {
      * Add a new job
      */
     const addJob = useCallback((jobData, userId = activeUserId, createdBy) => {
-        if (!userId) return null;
-
+        // Allow null userId for library items (unassigned jobs)
         const newJob = {
             ...createDefaultJob(userId, createdBy),
             ...jobData,
-            userId
+            userId: userId || null  // Explicitly set to null if undefined
         };
 
         // Set initial lock status
