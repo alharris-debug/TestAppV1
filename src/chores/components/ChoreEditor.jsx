@@ -147,24 +147,6 @@ export const ChoreEditorModal = ({
                         />
                     </div>
 
-                    {/* Gem Reward Input */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Gem Reward
-                        </label>
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                className="input-field gem-input"
-                                value={form.points}
-                                onChange={e => updateField('points', parseInt(e.target.value) || 1)}
-                            />
-                            <span className="text-2xl">💎</span>
-                        </div>
-                    </div>
-
                     {/* Repeat Type Selector */}
                     <div>
                         <label className="toggle-label block mb-2">

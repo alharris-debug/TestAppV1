@@ -112,14 +112,6 @@ export const ChoreCard = ({
                     <div>
                         <h3 className="text-2xl font-bold text-gray-800">{name}</h3>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <GemIcon />
-                            <span className="text-lg font-semibold text-purple-700">
-                                +{points}
-                                {streak > 0 && streakBonus > 0 && (
-                                    <span className="text-orange-500"> +{streakBonus} streak</span>
-                                )}
-                            </span>
-
                             {/* Repeat type badges */}
                             {repeatType === REPEAT_TYPES.MULTIPLE && (
                                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
@@ -172,7 +164,7 @@ export const ManagementChoreCard = ({
                     <span className="text-3xl">{chore.icon}</span>
                     <div>
                         <div className="font-bold text-gray-800">{chore.name}</div>
-                        <div className="text-sm text-purple-600">💎 {chore.points} gems</div>
+                        <div className="text-sm text-gray-500">{chore.repeatType || 'daily'}</div>
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -223,7 +215,7 @@ export const SavedChoreCard = ({
                     <span className="text-3xl">{chore.icon}</span>
                     <div>
                         <div className="font-bold text-gray-800">{chore.name}</div>
-                        <div className="text-sm text-purple-600">💎 {chore.points} gems</div>
+                        <div className="text-sm text-gray-500">{chore.repeatType || 'daily'}</div>
                     </div>
                 </div>
                 <div className="flex gap-2">
