@@ -193,6 +193,17 @@ const FamilyEconomyApp = () => {
             recurrence: choreForm.repeatType
         };
 
+        // Helper to check if user already has this chore assigned
+        const userHasChore = (userId) => {
+            return economy.chores.some(c =>
+                c.userId === userId &&
+                c.name === choreData.name &&
+                c.icon === choreData.icon &&
+                c.recurrence === choreData.recurrence &&
+                c.id !== editingChore?.id // Exclude the chore being edited
+            );
+        };
+
         if (editingChore) {
             if (choreForm.assignTo.length === 0) {
                 // Unassign - make inactive (set userId to null)
@@ -200,9 +211,11 @@ const FamilyEconomyApp = () => {
             } else {
                 // Update existing chore with first selected user
                 economy.updateChore(editingChore.id, { ...choreData, userId: choreForm.assignTo[0] });
-                // If additional users selected, create new chores for them
+                // If additional users selected, create new chores for them (skip duplicates)
                 choreForm.assignTo.slice(1).forEach(userId => {
-                    economy.addChore(choreData, userId);
+                    if (!userHasChore(userId)) {
+                        economy.addChore(choreData, userId);
+                    }
                 });
             }
         } else {
@@ -210,9 +223,11 @@ const FamilyEconomyApp = () => {
                 // Create unassigned chore (inactive/library item)
                 economy.addChore(choreData, null);
             } else {
-                // Create new chore for each selected user
+                // Create new chore for each selected user (skip duplicates)
                 choreForm.assignTo.forEach(userId => {
-                    economy.addChore(choreData, userId);
+                    if (!userHasChore(userId)) {
+                        economy.addChore(choreData, userId);
+                    }
                 });
             }
         }
@@ -287,6 +302,10 @@ const FamilyEconomyApp = () => {
     // Management modal state (unified for chores and jobs)
     const [showManagement, setShowManagement] = useState(false);
     const [managementTab, setManagementTab] = useState('chores'); // 'chores', 'jobs', or 'templates'
+
+    // Spending modal state
+    const [showSpendingModal, setShowSpendingModal] = useState(false);
+    const [spendingForm, setSpendingForm] = useState({ amount: '', description: '' });
 
     // Template state
     const [selectedUsersForTemplate, setSelectedUsersForTemplate] = useState([]);
@@ -694,6 +713,19 @@ const FamilyEconomyApp = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Spend Money Button - Password Protected */}
+                            {isParent && activeUser && (activeUser.cashBalance || 0) > 0 && (
+                                <button
+                                    onClick={() => requireParentAccess(() => {
+                                        setSpendingForm({ amount: '', description: '' });
+                                        setShowSpendingModal(true);
+                                    })}
+                                    className="w-full mt-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
+                                >
+                                    <span>💸</span> Record Spending
+                                </button>
+                            )}
                         </div>
 
                         {/* Transaction List */}
@@ -771,6 +803,7 @@ const FamilyEconomyApp = () => {
                 <PasswordSetupModal
                     isOpen={true}
                     onClose={() => patternLock.cancel()}
+                    onClear={() => patternLock.clearPattern()}
                     patternLock={patternLock}
                 />
             )}
@@ -779,6 +812,7 @@ const FamilyEconomyApp = () => {
                 <PasswordEntryModal
                     isOpen={true}
                     onClose={() => patternLock.cancel()}
+                    onClear={() => patternLock.clearPattern()}
                     patternLock={patternLock}
                 />
             )}
@@ -922,19 +956,43 @@ const FamilyEconomyApp = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-1">
-                                    Unlock after completing # daily tasks
+                                <label className="block text-sm font-medium text-slate-300 mb-2">
+                                    Unlock Condition
                                 </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={jobForm.unlockConditions.dailyChores}
-                                    onChange={(e) => setJobForm({
-                                        ...jobForm,
-                                        unlockConditions: {...jobForm.unlockConditions, dailyChores: parseInt(e.target.value) || 0}
-                                    })}
-                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
-                                />
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer border border-slate-600">
+                                        <input
+                                            type="radio"
+                                            name="unlockType"
+                                            checked={!jobForm.unlockConditions.requireAllChores && jobForm.unlockConditions.dailyChores === 0}
+                                            onChange={() => setJobForm({
+                                                ...jobForm,
+                                                unlockConditions: { dailyChores: 0, weeklyChores: 0, requireAllChores: false }
+                                            })}
+                                            className="w-4 h-4"
+                                        />
+                                        <div>
+                                            <span className="text-slate-200 font-medium">Always Available</span>
+                                            <p className="text-xs text-slate-400">No unlock requirements</p>
+                                        </div>
+                                    </label>
+                                    <label className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer border border-slate-600">
+                                        <input
+                                            type="radio"
+                                            name="unlockType"
+                                            checked={jobForm.unlockConditions.requireAllChores === true}
+                                            onChange={() => setJobForm({
+                                                ...jobForm,
+                                                unlockConditions: { dailyChores: 0, weeklyChores: 0, requireAllChores: true }
+                                            })}
+                                            className="w-4 h-4"
+                                        />
+                                        <div>
+                                            <span className="text-slate-200 font-medium">All Tasks Completed</span>
+                                            <p className="text-xs text-slate-400">Requires all assigned tasks to be done & approved</p>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <input
@@ -1616,6 +1674,73 @@ const FamilyEconomyApp = () => {
                 </div>
             )}
 
+            {/* Spending Modal */}
+            {showSpendingModal && (
+                <div className="modal-overlay" onClick={() => setShowSpendingModal(false)}>
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+                            <span className="text-red-400">💸</span> Record Spending
+                        </h2>
+                        <p className="text-sm text-slate-400 mb-4">
+                            Deduct money from {activeUser?.name}'s balance (current: {formatCents(activeUser?.cashBalance || 0)})
+                        </p>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Amount ($)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    max={(activeUser?.cashBalance || 0) / 100}
+                                    value={spendingForm.amount}
+                                    onChange={(e) => setSpendingForm({...spendingForm, amount: e.target.value})}
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-red-500"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">
+                                    Description <span className="text-slate-500">(optional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={spendingForm.description}
+                                    onChange={(e) => setSpendingForm({...spendingForm, description: e.target.value})}
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-red-500"
+                                    placeholder="e.g., Toy store, Ice cream, etc."
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setShowSpendingModal(false)}
+                                className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const amountCents = Math.round(parseFloat(spendingForm.amount || 0) * 100);
+                                    if (amountCents <= 0 || amountCents > (activeUser?.cashBalance || 0)) return;
+                                    const description = spendingForm.description.trim() || 'Spending';
+                                    economy.redeemCash(activeUser.id, amountCents, description);
+                                    soundSystem.purchase();
+                                    setShowSpendingModal(false);
+                                }}
+                                disabled={
+                                    !spendingForm.amount ||
+                                    parseFloat(spendingForm.amount) <= 0 ||
+                                    Math.round(parseFloat(spendingForm.amount || 0) * 100) > (activeUser?.cashBalance || 0)
+                                }
+                                className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Deduct {spendingForm.amount ? formatCents(Math.round(parseFloat(spendingForm.amount) * 100)) : '$0.00'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Money Animations */}
             <AnimationOverlay />
         </div>
@@ -1774,7 +1899,10 @@ const JobCardSimple = ({ job, chores, onComplete }) => {
                     </div>
                     {isLocked && (
                         <div className="text-xs text-amber-500 mt-1">
-                            Complete {job.unlockConditions?.dailyChores || 0} daily tasks to unlock
+                            {job.unlockConditions?.requireAllChores
+                                ? 'Complete all tasks to unlock'
+                                : `Complete ${job.unlockConditions?.dailyChores || 0} daily tasks to unlock`
+                            }
                         </div>
                     )}
                 </div>
