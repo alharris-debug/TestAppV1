@@ -70,7 +70,8 @@ const FamilyEconomyApp = () => {
     });
 
     // UI State
-    const [activeTab, setActiveTab] = useState('chores'); // 'chores', 'jobs', 'history'
+    const [activeTab, setActiveTab] = useState('chores'); // 'chores', 'jobs'
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [showUserSelector, setShowUserSelector] = useState(false);
     const [showUserEditor, setShowUserEditor] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
@@ -529,8 +530,11 @@ const FamilyEconomyApp = () => {
                                 </button>
                             )}
 
-                            {/* Balance Display */}
-                            <div className="text-right">
+                            {/* Balance Display - Clickable for History */}
+                            <button
+                                onClick={() => setShowHistoryModal(true)}
+                                className="text-right hover:bg-slate-700/50 rounded-lg px-2 py-1 -mr-2 transition-colors"
+                            >
                                 <div className="text-slate-400 text-xs">Balance</div>
                                 <div className="text-emerald-400 font-bold text-xl">
                                     {formatCents(activeUser?.cashBalance || 0)}
@@ -540,7 +544,7 @@ const FamilyEconomyApp = () => {
                                         +{formatCents(activeUser.pendingBalance)} pending
                                     </div>
                                 )}
-                            </div>
+                            </button>
 
                             {/* Sound Toggle */}
                             <button
@@ -571,8 +575,7 @@ const FamilyEconomyApp = () => {
                     <div className="flex">
                         {[
                             { id: 'chores', label: 'Tasks', icon: '✓' },
-                            { id: 'jobs', label: 'Jobs', icon: '💵' },
-                            { id: 'history', label: 'History', icon: '📊' }
+                            { id: 'jobs', label: 'Jobs', icon: '💵' }
                         ].map(tab => (
                             <button
                                 key={tab.id}
@@ -691,49 +694,52 @@ const FamilyEconomyApp = () => {
                     </div>
                 )}
 
-                {/* History Tab */}
-                {activeTab === 'history' && (
-                    <div className="space-y-4">
-                        {/* Summary Card */}
-                        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-                            <h3 className="font-bold text-slate-200 mb-4 flex items-center gap-2">
-                                <span className="text-emerald-400">$</span> Balance Summary
-                            </h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                    <div className="text-slate-400 text-sm">Available</div>
-                                    <div className="text-2xl font-bold text-emerald-400">
-                                        {formatCents(activeUser?.cashBalance || 0)}
-                                    </div>
-                                </div>
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                    <div className="text-slate-400 text-sm">Pending</div>
-                                    <div className="text-2xl font-bold text-amber-400">
-                                        {formatCents(activeUser?.pendingBalance || 0)}
-                                    </div>
+            </main>
+
+            {/* History Modal */}
+            {showHistoryModal && (
+                <div className="modal-overlay" onClick={() => setShowHistoryModal(false)}>
+                    <div className="modal-content bg-slate-800 border border-slate-700" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', maxHeight: '80vh', overflow: 'auto' }}>
+                        <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+                            <span className="text-emerald-400">$</span> {activeUser?.name}'s Balance
+                        </h2>
+
+                        {/* Balance Summary */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="bg-slate-900/50 rounded-lg p-3">
+                                <div className="text-slate-400 text-sm">Available</div>
+                                <div className="text-2xl font-bold text-emerald-400">
+                                    {formatCents(activeUser?.cashBalance || 0)}
                                 </div>
                             </div>
-
-                            {/* Spend Money Button - Password Protected */}
-                            {isParent && activeUser && (activeUser.cashBalance || 0) > 0 && (
-                                <button
-                                    onClick={() => requireParentAccess(() => {
-                                        setSpendingForm({ amount: '', description: '' });
-                                        setShowSpendingModal(true);
-                                    })}
-                                    className="w-full mt-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
-                                >
-                                    <span>💸</span> Record Spending
-                                </button>
-                            )}
+                            <div className="bg-slate-900/50 rounded-lg p-3">
+                                <div className="text-slate-400 text-sm">Pending</div>
+                                <div className="text-2xl font-bold text-amber-400">
+                                    {formatCents(activeUser?.pendingBalance || 0)}
+                                </div>
+                            </div>
                         </div>
 
+                        {/* Spend Money Button - Password Protected */}
+                        {isParent && activeUser && (activeUser.cashBalance || 0) > 0 && (
+                            <button
+                                onClick={() => requireParentAccess(() => {
+                                    setSpendingForm({ amount: '', description: '' });
+                                    setShowHistoryModal(false);
+                                    setShowSpendingModal(true);
+                                })}
+                                className="w-full mb-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
+                            >
+                                <span>💸</span> Record Spending
+                            </button>
+                        )}
+
                         {/* Transaction List */}
-                        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-                            <h3 className="font-bold text-slate-200 mb-4">Recent Transactions</h3>
+                        <div className="border-t border-slate-700 pt-4">
+                            <h3 className="font-bold text-slate-200 mb-3">Recent Transactions</h3>
                             {userTransactions.length > 0 ? (
                                 <div className="space-y-2">
-                                    {userTransactions.slice(0, 10).map(tx => (
+                                    {userTransactions.slice(0, 15).map(tx => (
                                         <div key={tx.id} className="flex items-center justify-between py-3 border-b border-slate-700 last:border-0">
                                             <div>
                                                 <div className="font-medium text-slate-200">{tx.description}</div>
@@ -753,9 +759,16 @@ const FamilyEconomyApp = () => {
                                 </div>
                             )}
                         </div>
+
+                        <button
+                            onClick={() => setShowHistoryModal(false)}
+                            className="w-full mt-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-semibold"
+                        >
+                            Close
+                        </button>
                     </div>
-                )}
-            </main>
+                </div>
+            )}
 
             {/* User Selector Modal */}
             {showUserSelector && (
@@ -803,7 +816,6 @@ const FamilyEconomyApp = () => {
                 <PasswordSetupModal
                     isOpen={true}
                     onClose={() => patternLock.cancel()}
-                    onClear={() => patternLock.clearPattern()}
                     patternLock={patternLock}
                 />
             )}
@@ -812,7 +824,6 @@ const FamilyEconomyApp = () => {
                 <PasswordEntryModal
                     isOpen={true}
                     onClose={() => patternLock.cancel()}
-                    onClear={() => patternLock.clearPattern()}
                     patternLock={patternLock}
                 />
             )}

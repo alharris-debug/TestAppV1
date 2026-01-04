@@ -92,13 +92,11 @@ export const PatternLockGrid = ({
  * @param {Object} props
  * @param {boolean} props.isOpen - Modal visibility
  * @param {Function} props.onClose - Close handler
- * @param {Function} props.onClear - Clear pattern handler
  * @param {Object} props.patternLock - Pattern lock hook return value
  */
 export const PasswordSetupModal = ({
     isOpen,
     onClose,
-    onClear,
     patternLock
 }) => {
     if (!isOpen) return null;
@@ -138,20 +136,12 @@ export const PasswordSetupModal = ({
                     onPatternEnd={handlePatternEnd}
                 />
 
-                <div className="flex gap-3 mt-4">
-                    <button
-                        onClick={onClear}
-                        className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
-                    >
-                        Clear
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
-                    >
-                        Cancel
-                    </button>
-                </div>
+                <button
+                    onClick={onClose}
+                    className="w-full mt-4 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
+                >
+                    Cancel
+                </button>
             </div>
         </div>
     );
@@ -163,13 +153,11 @@ export const PasswordSetupModal = ({
  * @param {Object} props
  * @param {boolean} props.isOpen - Modal visibility
  * @param {Function} props.onClose - Close handler
- * @param {Function} props.onClear - Clear pattern handler
  * @param {Object} props.patternLock - Pattern lock hook return value
  */
 export const PasswordEntryModal = ({
     isOpen,
     onClose,
-    onClear,
     patternLock
 }) => {
     if (!isOpen) return null;
@@ -216,20 +204,12 @@ export const PasswordEntryModal = ({
                     onPatternEnd={handlePatternEnd}
                 />
 
-                <div className="flex gap-3 mt-4">
-                    <button
-                        onClick={onClear}
-                        className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
-                    >
-                        Clear
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
-                    >
-                        Cancel
-                    </button>
-                </div>
+                <button
+                    onClick={onClose}
+                    className="w-full mt-4 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200"
+                >
+                    Cancel
+                </button>
             </div>
         </div>
     );
