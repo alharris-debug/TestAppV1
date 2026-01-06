@@ -923,7 +923,153 @@
             z-index: 1;
         }
 
-        /* ============ MOBILE RESPONSIVE STYLES ============ */
+        /* ============ FAMILY ECONOMY MOBILE STYLES ============ */
+
+        /* Better touch targets for all interactive elements */
+        button,
+        [role="button"],
+        input[type="checkbox"],
+        input[type="radio"] {
+            min-height: 44px;
+        }
+
+        /* Capacitor/Android specific improvements */
+        @media screen and (max-width: 640px) {
+            /* Safe area handling for notched devices */
+            header {
+                padding-top: max(0.75rem, env(safe-area-inset-top));
+            }
+
+            main {
+                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+            }
+
+            /* Header - larger touch targets */
+            header button {
+                min-height: 48px;
+                padding: 0.5rem 0.75rem;
+            }
+
+            /* Tab navigation - bigger, easier to tap */
+            nav button {
+                min-height: 52px;
+                font-size: 0.9375rem;
+                padding: 0.75rem 0.5rem;
+            }
+
+            /* Card depth for Android - more pronounced shadows */
+            .bg-slate-800,
+            .bg-slate-800\/50,
+            .bg-emerald-900\/40,
+            .bg-amber-900\/30 {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4),
+                            0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+
+            /* Task/Job cards - more breathing room */
+            .rounded-xl.p-4 {
+                padding: 1.125rem;
+            }
+
+            /* Done buttons - larger touch target */
+            .bg-emerald-600,
+            .bg-emerald-500 {
+                min-height: 48px;
+                min-width: 88px;
+                padding: 0.625rem 1.25rem;
+                font-size: 1rem;
+            }
+
+            /* Status badges - slightly larger */
+            .text-sm.font-bold {
+                padding: 0.5rem 0.875rem;
+            }
+
+            /* Emojis/icons - bit larger for visibility */
+            .text-3xl {
+                font-size: 2rem;
+            }
+
+            .text-2xl {
+                font-size: 1.625rem;
+            }
+
+            /* Balance display - more prominent */
+            .text-xl {
+                font-size: 1.375rem;
+            }
+
+            /* Form inputs - prevent iOS zoom, better touch */
+            input[type="text"],
+            input[type="number"],
+            input[type="email"],
+            select,
+            textarea {
+                min-height: 48px;
+                font-size: 16px !important; /* Prevents zoom on iOS */
+                padding: 0.75rem;
+            }
+
+            /* Modal improvements */
+            .modal-content {
+                margin: 0.75rem;
+                max-height: calc(100vh - 1.5rem);
+                max-height: calc(100dvh - 1.5rem); /* Dynamic viewport height */
+                border-radius: 1.25rem;
+                padding: 1.25rem;
+            }
+
+            .modal-overlay {
+                padding: 0.5rem;
+            }
+
+            /* Spacing between cards */
+            .space-y-3 > * + * {
+                margin-top: 0.875rem;
+            }
+
+            .space-y-4 > * + * {
+                margin-top: 1.125rem;
+            }
+
+            /* Section headers */
+            .text-lg {
+                font-size: 1.0625rem;
+            }
+
+            /* User selector in header - better tap target */
+            .rounded-full.px-3.py-2 {
+                padding: 0.625rem 1rem;
+            }
+        }
+
+        /* Very small screens (320px - 375px) */
+        @media screen and (max-width: 375px) {
+            .rounded-xl.p-4 {
+                padding: 0.875rem;
+            }
+
+            .text-3xl {
+                font-size: 1.75rem;
+            }
+
+            nav button {
+                font-size: 0.8125rem;
+                padding: 0.625rem 0.25rem;
+            }
+
+            .bg-emerald-600,
+            .bg-emerald-500 {
+                min-width: 72px;
+                padding: 0.5rem 0.875rem;
+            }
+
+            .modal-content {
+                padding: 1rem;
+            }
+        }
+
+        /* ============ BATTLE VIEW MOBILE STYLES ============ */
         @media (max-width: 768px) {
             /* Navigation */
             .nav-btn {
