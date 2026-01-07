@@ -528,7 +528,7 @@ const FamilyEconomyApp = () => {
                             {/* Parent Review Button in Header - always show for parents */}
                             {isParent && (
                                 <button
-                                    onClick={() => requireParentAccess(() => setShowParentReview(true))}
+                                    onClick={() => setShowParentReview(true)}
                                     className={`relative ${pendingApprovalsCount > 0 ? 'bg-amber-500 hover:bg-amber-400' : 'bg-slate-600 hover:bg-slate-500'} text-white rounded-full p-2 transition-all`}
                                     title={pendingApprovalsCount > 0 ? "Review pending approvals" : "No pending approvals"}
                                 >
@@ -654,10 +654,10 @@ const FamilyEconomyApp = () => {
                         {/* Manage Chores Button (Parent Only) */}
                         {isParent && (
                             <button
-                                onClick={() => requireParentAccess(() => {
+                                onClick={() => {
                                     setManagementTab('chores');
                                     setShowManagement(true);
-                                })}
+                                }}
                                 className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold flex items-center justify-center gap-2 border border-dashed border-slate-600"
                             >
                                 <span>⚙</span> Manage Tasks & Jobs
@@ -693,10 +693,10 @@ const FamilyEconomyApp = () => {
                         {/* Manage Jobs Button (Parent Only) */}
                         {isParent && (
                             <button
-                                onClick={() => requireParentAccess(() => {
+                                onClick={() => {
                                     setManagementTab('jobs');
                                     setShowManagement(true);
-                                })}
+                                }}
                                 className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold flex items-center justify-center gap-2 border border-dashed border-slate-600"
                             >
                                 <span>⚙</span> Manage Tasks & Jobs
@@ -731,14 +731,14 @@ const FamilyEconomyApp = () => {
                             </div>
                         </div>
 
-                        {/* Spend Money Button - Password Protected */}
+                        {/* Spend Money Button - Parent only */}
                         {isParent && activeUser && (activeUser.cashBalance || 0) > 0 && (
                             <button
-                                onClick={() => requireParentAccess(() => {
+                                onClick={() => {
                                     setSpendingForm({ amount: '', description: '' });
                                     setShowHistoryModal(false);
                                     setShowSpendingModal(true);
-                                })}
+                                }}
                                 className="w-full mb-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
                             >
                                 <span>💸</span> Record Spending
@@ -791,8 +791,17 @@ const FamilyEconomyApp = () => {
                                 <button
                                     key={user.id}
                                     onClick={() => {
-                                        economy.switchUser(user.id);
-                                        setShowUserSelector(false);
+                                        // If switching to a parent user, require authentication first
+                                        if (user.role === 'parent') {
+                                            requireParentAccess(() => {
+                                                economy.switchUser(user.id);
+                                                setShowUserSelector(false);
+                                            });
+                                        } else {
+                                            // Child users don't need authentication
+                                            economy.switchUser(user.id);
+                                            setShowUserSelector(false);
+                                        }
                                     }}
                                     className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all ${
                                         user.id === economy.activeUserId
@@ -809,15 +818,18 @@ const FamilyEconomyApp = () => {
                                 </button>
                             ))}
                         </div>
-                        <button
-                            onClick={() => {
-                                setShowUserSelector(false);
-                                requireParentAccess(() => openUserEditor());
-                            }}
-                            className="w-full mt-4 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold"
-                        >
-                            + Add Family Member
-                        </button>
+                        {/* Add family member button - only shown to parents */}
+                        {isParent && (
+                            <button
+                                onClick={() => {
+                                    setShowUserSelector(false);
+                                    openUserEditor();
+                                }}
+                                className="w-full mt-4 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold"
+                            >
+                                + Add Family Member
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
