@@ -818,8 +818,8 @@ const FamilyEconomyApp = () => {
                                 </button>
                             ))}
                         </div>
-                        {/* Add family member button - only shown to parents */}
-                        {isParent && (
+                        {/* Add family member button - shown to parents OR when no users exist yet */}
+                        {(isParent || economy.users.length === 0) && (
                             <button
                                 onClick={() => {
                                     setShowUserSelector(false);
