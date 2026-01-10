@@ -508,7 +508,7 @@ const FamilyEconomyApp = () => {
     }, {});
 
     return (
-        <div className="min-h-screen bg-slate-900">
+        <div className="min-h-screen bg-slate-900" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
             {/* Header */}
             <header className="bg-slate-800 border-b border-slate-700">
                 <div className="max-w-lg mx-auto px-4 py-3">
@@ -1404,30 +1404,31 @@ const FamilyEconomyApp = () => {
                                                         <div className="text-xs text-slate-400">{group.recurrence}</div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-2 flex flex-wrap gap-1">
-                                                    {group.assignments.map(assignment => (
-                                                        <span
-                                                            key={assignment.choreId}
-                                                            className="inline-flex items-center gap-1 bg-violet-600/30 text-violet-300 px-2 py-1 rounded-full text-xs border border-violet-500/30"
-                                                        >
-                                                            <span>{assignment.userAvatar}</span>
-                                                            <span>{assignment.userName}</span>
-                                                            <button
-                                                                onClick={() => {
-                                                                    const chore = economy.chores.find(c => c.id === assignment.choreId);
-                                                                    if (chore) {
-                                                                        setOpenedFromManagement(true);
-                                                                        setShowManagement(false);
-                                                                        openChoreEditor(chore);
-                                                                    }
-                                                                }}
-                                                                className="ml-1 text-violet-400 hover:text-violet-200"
-                                                                title="Edit this assignment"
+                                                <div className="mt-2 flex items-center justify-between">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {group.assignments.map(assignment => (
+                                                            <span
+                                                                key={assignment.choreId}
+                                                                className="inline-flex items-center gap-1 bg-violet-600/30 text-violet-300 px-2 py-1 rounded-full text-xs border border-violet-500/30"
                                                             >
-                                                                ✎
-                                                            </button>
-                                                        </span>
-                                                    ))}
+                                                                <span>{assignment.userAvatar}</span>
+                                                                <span>{assignment.userName}</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            const chore = economy.chores.find(c => c.id === group.assignments[0]?.choreId);
+                                                            if (chore) {
+                                                                setOpenedFromManagement(true);
+                                                                setShowManagement(false);
+                                                                openChoreEditor(chore);
+                                                            }
+                                                        }}
+                                                        className="bg-violet-600 hover:bg-violet-500 text-white px-3 py-1 rounded-lg text-sm font-medium"
+                                                    >
+                                                        Edit
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))
@@ -1472,30 +1473,31 @@ const FamilyEconomyApp = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-2 flex flex-wrap gap-1">
-                                                    {group.assignments.map(assignment => (
-                                                        <span
-                                                            key={assignment.jobId}
-                                                            className="inline-flex items-center gap-1 bg-emerald-600/30 text-emerald-300 px-2 py-1 rounded-full text-xs border border-emerald-500/30"
-                                                        >
-                                                            <span>{assignment.userAvatar}</span>
-                                                            <span>{assignment.userName}</span>
-                                                            <button
-                                                                onClick={() => {
-                                                                    const job = economy.jobs.find(j => j.id === assignment.jobId);
-                                                                    if (job) {
-                                                                        setOpenedFromManagement(true);
-                                                                        setShowManagement(false);
-                                                                        openJobEditor(job);
-                                                                    }
-                                                                }}
-                                                                className="ml-1 text-emerald-400 hover:text-emerald-200"
-                                                                title="Edit this assignment"
+                                                <div className="mt-2 flex items-center justify-between">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {group.assignments.map(assignment => (
+                                                            <span
+                                                                key={assignment.jobId}
+                                                                className="inline-flex items-center gap-1 bg-emerald-600/30 text-emerald-300 px-2 py-1 rounded-full text-xs border border-emerald-500/30"
                                                             >
-                                                                ✎
-                                                            </button>
-                                                        </span>
-                                                    ))}
+                                                                <span>{assignment.userAvatar}</span>
+                                                                <span>{assignment.userName}</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            const job = economy.jobs.find(j => j.id === group.assignments[0]?.jobId);
+                                                            if (job) {
+                                                                setOpenedFromManagement(true);
+                                                                setShowManagement(false);
+                                                                openJobEditor(job);
+                                                            }
+                                                        }}
+                                                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-sm font-medium"
+                                                    >
+                                                        Edit
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))
