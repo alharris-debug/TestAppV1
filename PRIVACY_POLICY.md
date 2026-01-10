@@ -1,76 +1,44 @@
-# Privacy Policy for Family Economy
+# Privacy Policy for ChoreQuest
 
-**Last updated: January 2026**
+**Last updated:** January 10, 2025
 
 ## Overview
 
-Family Economy ("the App") is a family chore management and reward tracking application. This privacy policy explains how the App handles your information.
+ChoreQuest ("the App") is a family chore management application. Your privacy is important to us.
 
 ## Data Collection
 
-**Family Economy does not collect, store, or transmit any personal data to external servers.**
+**We do not collect any personal data.**
 
-All information entered into the App is stored locally on your device only using your device's local storage capabilities.
+All information you enter into the App (family member names, chores, balances, etc.) is stored locally on your device only. We do not have access to this data.
 
-## What Data is Stored Locally
+## Data Storage
 
-The App stores the following information locally on your device:
-
-- **User profiles**: Names and avatars for family members
-- **Chore data**: Tasks, completion status, and schedules
-- **Job data**: Available jobs, earnings, and completion counts
-- **Transaction history**: Record of earnings and spending
-- **Pattern lock**: Parent authentication pattern (hashed locally)
-- **App settings**: Preferences and configuration
-
-## Data Storage Location
-
-All data is stored in your device's local storage (localStorage). This data:
-- Never leaves your device
-- Is not backed up to any cloud service by the App
-- Is not shared with any third parties
-- Is not accessible by the App developer
-
-## Data Deletion
-
-You can delete all App data at any time by:
-1. Clearing the App's data in your device settings
-2. Uninstalling the App
+- All data is stored locally on your device
+- No data is transmitted to external servers
+- No account or login is required
+- No analytics or tracking tools are used
 
 ## Third-Party Services
 
-Family Economy does not integrate with any third-party services for:
-- Analytics
-- Advertising
-- User tracking
-- Data collection
+The App does not use any third-party services that collect data.
 
 ## Children's Privacy
 
-Family Economy is designed for family use, including children. Because no data is collected or transmitted, the App is compliant with children's privacy regulations including COPPA (Children's Online Privacy Protection Act).
+The App is safe for use by children. We do not collect any personal information from users of any age.
 
-## Email Recovery Feature (Optional)
+## Data Deletion
 
-If you enable the optional email recovery feature:
-- Your email address is hashed and stored locally only
-- Recovery codes are sent using EmailJS (third-party email service)
-- EmailJS privacy policy applies to the email transmission
-- This feature is disabled by default and requires manual setup
+Since all data is stored locally on your device, you can delete all App data by:
+- Clearing the App's data in your device settings, or
+- Uninstalling the App
 
 ## Changes to This Policy
 
-We may update this privacy policy from time to time. Any changes will be reflected in the "Last updated" date at the top of this policy.
+We may update this Privacy Policy from time to time. Any changes will be reflected in the "Last updated" date above.
 
-## Contact
+## Contact Us
 
-If you have questions about this privacy policy, please contact:
+If you have any questions about this Privacy Policy, please contact us at:
 
-[Your contact email]
-
-## Summary
-
-- **No data collection**: We don't collect your data
-- **No tracking**: We don't track you
-- **No ads**: We don't show ads
-- **Local only**: Everything stays on your device
-- **Your control**: You can delete everything anytime
+alharris.debug@gmail.com
